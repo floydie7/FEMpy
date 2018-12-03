@@ -16,19 +16,25 @@ from .helpers import dbquad_triangle
 
 def assemble_matrix(coeff_funct, mesh, trial_basis, test_basis, derivative_order_trial, derivative_order_test):
     """
+    Construct the finite element stiffness matrix.
 
     Parameters
     ----------
-    coeff_funct
-    mesh
-    trial_basis
-    test_basis
-    derivative_order_trial
-    derivative_order_test
+    coeff_funct : function
+        Function name of the coefficient function `c`(`x`(,`y`,...)) in a Poisson equation.
+    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
+        A :class:`Mesh` class defining the mesh and associated information matrices.
+    trial_basis, test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}
+        A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases.
+    derivative_order_trial, derivative_order_test : int or tuple of int
+        The derivative order to be applied to the finite element basis functions. If basis function is one-dimensional,
+        this should be specified as an int. Otherwise, the derivative order should be specified as a tuple with the
+        orders corresponding to the coordinate axes in the basis functions. e.g., ``(`x_order`, `y_order`,...)``.
 
     Returns
     -------
-
+    sparse matrix
+        The finite element stiffness matrix as a Compressed Sparse Row matrix.
     """
 
     # Determine the size of the matrix
@@ -69,25 +75,32 @@ def assemble_matrix(coeff_funct, mesh, trial_basis, test_basis, derivative_order
 
 def assemble_vector(source_funct, mesh, test_basis, derivative_order_test):
     """
+    Constructs the finite element load vector.
 
     Parameters
     ----------
-    source_funct
-    mesh
-    test_basis
-    derivative_order_test
+    source_funct : function
+        The nonhomogeneous source function `f`(`x`(,`y`,...)) of the Poisson equation.
+    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
+        A :class:`Mesh` class defining the mesh and associated information matrices.
+    test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}
+        A :class: `FEBasis` class defining the finite element basis functions for the test basis.
+    derivative_order_test : int or tuple of int
+        The derivative order to be applied to the finite element basis function. If basis function is one-dimensional,
+        this should be specified as an int. Otherwise, the derivative order should be specified as a tuple with the
+        orders corresponding to the coordinate axes in the basis functions. e.g., ``(`x_order`, `y_order`,...)``.
 
     Returns
     -------
-
+    ndarray
+        The finite element load vector.
     """
 
     # Determine the size of the vector
-
     num_unknowns, num_local_test = _basis_type_parser(test_basis.basis_type, mesh)
 
     # Initialize the vector
-    b = np.zeros(int(num_unknowns+1))
+    b = np.zeros(int(num_unknowns))
 
     for n in range(mesh.T.shape[1]):
         # Extract the global node coordinates to evaluate our integral on
@@ -116,6 +129,26 @@ def assemble_vector(source_funct, mesh, test_basis, derivative_order_test):
 
 
 def _basis_type_parser(basis_type, mesh):
+    """
+    Parses the basis type and mesh information.
+
+    Uses the `basis_type` and the `mesh` information to determine the number of unknowns or equations for our linear
+    system as well as the number of local basis functions in each element.
+
+    Parameters
+    ----------
+    basis_type : int
+        A integer code identifying the basis type.
+    mesh : :class: `FEMpy.Mesh`
+        A :class: `Mesh` class defining the mesh and corresponding information matrices.
+
+    Returns
+    -------
+    num_unknowns_eqs : int
+        Number of unknown variables or equations in linear system.
+    num_local_basis_fns : int
+        Number of local basis functions in finite element.
+    """
     if basis_type == 101:
         # Pull the number of elements from the mesh information
         num_elements_x = mesh.num_elements_x

@@ -4,6 +4,7 @@ Author: Benjamin Floyd
 
 Contains the finite local and reference basis functions.
 """
+
 from collections import namedtuple
 
 import numpy as np
@@ -11,11 +12,31 @@ import numpy as np
 
 class IntervalBasis1D(object):
     """
+    Defines a finite element basis function set on a one-dimensional interval.
+
+    Creates a complete set of finite element basis functions for a one-dimensional domain of either linear or quadratic
+    basis types.
 
     Parameters
     ----------
-    basis_type
+    basis_type : {101, 'linear', 102, 'quadratic'}
+        Finite element basis type. Can either be called as a integer code or a string identifier to indicate the
+        type of basis function we are using.
+
+        - 101, 'linear' : 1-dimensional, linear basis.
+        - 102, 'quadratic' : 1-dimensional, quadratic basis.
+
+    Attributes
+    ----------
+    basis_type : int
+        Basis type standardized to an integer code.
+
+    Raises
+    ------
+    TypeError
+        If the basis type is not a string identifier or an integer code.
     """
+
     def __init__(self, basis_type):
         if isinstance(basis_type, int):
             self._basis_type = _BASIS_ALIAS.get(basis_type, None)
@@ -32,9 +53,32 @@ class IntervalBasis1D(object):
 
     @property
     def basis_type(self):
+        """Basis type standardized to an integer code."""
         return self._basis_type
 
     def __fe_reference_basis(self, derivative_order):
+        """
+        Finite element reference basis function.
+
+        Parameters
+        ----------
+        derivative_order : int
+            The derivative order to take the basis function to.
+
+        Returns
+        -------
+        float
+            The reference basis function (or derivative of function) evaluated at position `xhat` defined in local basis
+            function
+
+        Raises
+        ------
+        KeyError
+            If the basis index is out of range.
+        KeyError
+            If the derivative order is not positive.
+        """
+
         # Set the derivative order
         self._derivative_order_xhat = derivative_order
 
@@ -88,17 +132,23 @@ class IntervalBasis1D(object):
 
     def fe_local_basis(self, x, vertices, basis_idx, derivative_order):
         """
+        Defines the finite element local basis functions.
 
         Parameters
         ----------
-        x
-        vertices
-        basis_idx
-        derivative_order
+        x : float or array_like
+            A value or array of points to evaluate the function on.
+        vertices : array_like
+            Global node coordinates for the mesh element `En`.
+        basis_idx : int
+            Local basis index value.
+        derivative_order : int
+            The derivative order to take the basis function to.
 
         Returns
         -------
-
+        float
+            The local basis function (or derivative of funtion) evaluated at the points in `x`.
         """
         # Set the basis index
         self._basis_idx = basis_idx
@@ -117,10 +167,29 @@ class IntervalBasis1D(object):
 
 class TriangularBasis2D(IntervalBasis1D):
     """
+    Defines a finite element basis function set on a two-dimensional domian with triangular elements.
+
+    Creates a complete set of finite element basis functions for a two-dimensional domain with triangular elements
+    of either linear or quadratic basis types.
 
     Parameters
     ----------
-    basis_type
+        basis_type : {201, 'linear', 'linear2D_tri', 202, 'quadratic', 'quadratic2D_tri'}
+        Finite element basis type. Can either be called as a integer code or a string identifier to indicate the
+        type of basis function we are using.
+
+        - 201, 'linear', 'linear2D_tri : 1-dimensional, linear basis on triangular elements.
+        - 202, 'quadratic', 'quadratic2D_tri : 1-dimensional, quadratic basis on triangular elements.
+
+    Attributes
+    ----------
+    basis_type : int
+        Basis type standardized to an integer code.
+
+    Raises
+    ------
+    TypeError
+        If the basis type is not a string identifier or an integer code.
     """
 
     def __init__(self, basis_type):
@@ -134,7 +203,30 @@ class TriangularBasis2D(IntervalBasis1D):
         self._yhat = None
 
     def __fe_reference_basis(self, derivative_order):
-        # Set deriviative orders
+        """
+        Finite element reference basis function.
+
+        Parameters
+        ----------
+        derivative_order : tuple of int
+            The derivative orders to take the finite element basis functions to. Should be specified as a tuple with the
+            orders corresponding to the coordinate axes in the basis functions. e.g., ``(`x_order`, `y_order`)``.
+
+        Returns
+        -------
+        float
+            The reference basis function (or derivative of function) evaluated at position (`xhat`, `yhat`) defined in
+            local basis function.
+
+        Raises
+        ------
+        KeyError
+            If the basis index is out of range.
+        KeyError
+            If the derivative order is not positive.
+        """
+
+        # Set derivative orders
         self._derivative_order_xhat, self._derivative_order_yhat = derivative_order
         if self._basis_type == 201:  # linear basis
             # Set up casis. Dictionary keys are defined as (basis_idx, derivative_order_x, derivative_order_y)
@@ -229,17 +321,24 @@ class TriangularBasis2D(IntervalBasis1D):
 
     def fe_local_basis(self, coords, vertices, basis_idx, derivative_order):
         """
+        Defines the finite element local basis functions.
 
         Parameters
         ----------
-        coords
-        vertices
-        basis_idx
-        derivative_order
+        coords : array_like
+            The x and y coordinate values to evaluate the function on. e.g., ``(`x`, `y`)``.
+        vertices : array_like
+            Global node coordinates for all vertices of triangular mesh nodes on the mesh element `En`.
+        basis_idx : int
+            Local basis index value.
+        derivative_order : tuple of int
+            The derivative orders to take the basis function to. Should be specified as a tuple with the
+            orders corresponding to the coordinate axes in the basis functions. e.g., ``(`x_order`, `y_order`)``.
 
         Returns
         -------
-
+        float
+            The local basis function (or derivative of function) evaluated at the points in `coords`.
         """
         # Extract our coordinates
         x, y = coords
@@ -311,7 +410,7 @@ class TriangularBasis2D(IntervalBasis1D):
             ret_value += self.__fe_reference_basis((0, 2)) * (x2 - x1)**2 / det_jacobian**2
 
         else:
-            raise ValueError('Derivative order must be defined from 0 to 2 on each axis.')
+            ret_value = 0.0
 
         return ret_value
 

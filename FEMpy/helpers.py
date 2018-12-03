@@ -28,16 +28,26 @@ def det_jacobian(u, v, vertices):
 
 def dbquad_triangle(integrand, vertices, **kwargs):
     """
+    Compute the integral on a triangular domain.
+
+    In order to use the integration routines from scipy.integrate we transform the triangular domain into a square
+    domain.
 
     Parameters
     ----------
-    integrand
-    vertices
-    kwargs
+    integrand : function
+        Integrand defined on a triangular domain.
+    vertices : array_like
+        Vertices of the triangular domain.
+    **kwargs
+        Keyword arguments to pass to the integrand function.
 
     Returns
     -------
-
+    integral_value : float
+        The resultant integral value.
+    error : float
+        An estimate of the error.
     """
 
     # Unpack our vertex coordinates
@@ -63,12 +73,40 @@ def dbquad_triangle(integrand, vertices, **kwargs):
         return integral_value
 
     # Perform the double integration using quadrature in the transformed space
-    integral, error = dblquad(integrand_trans, 0, 1, lambda x: 0, lambda x: 1, epsrel=1e-6, epsabs=0)
+    integral_value, error = dblquad(integrand_trans, 0, 1, lambda x: 0, lambda x: 1, epsrel=1e-6, epsabs=0)
 
-    return integral, error
+    return integral_value, error
 
 
 def line_integral(integrand, endpoints, **kwargs):
+    """
+    Computes the line integral along a linear line segment.
+
+    The line integral is computed along the line segment from ``(`x0`, `y0`)`` to ``(`x1`, `y1`)`` via the
+    parameterization:
+    .. math::
+
+        r(t) = (1 - t) \cdot \langle x_0, y_0 \rangle + t \cdot \langle x_1, y_1 \rangle; 0 \leq t \leq 1.
+
+
+    Parameters
+    ----------
+    integrand : function
+        Function to be integrand.
+    endpoints : array_like
+        A matrix containing the segment end points in the form
+        ::
+            [[x0, x1],
+             [y0, y1]]
+
+    **kwargs
+        Keyword arguments to be passed to the integrand funciton.
+
+    Returns
+    -------
+    float
+        The resultant integral value.
+    """
     # Extract our end point coordinates
     x0 = endpoints[1, 1]
     y0 = endpoints[2, 1]
@@ -93,3 +131,9 @@ def line_integral(integrand, endpoints, **kwargs):
     int_value = quad(param_integrand, a=0, b=1)[0]
 
     return int_value
+
+def copy_docstring_from(source):
+    def wrapper(func):
+        func.__doc__ = source.__doc__
+        return func
+    return wrapper

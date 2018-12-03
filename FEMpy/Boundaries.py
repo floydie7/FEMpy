@@ -4,16 +4,68 @@ Author: Benjamin Floyd
 
 Contains classes to define and treat boundary conditions.
 """
+
 from collections import namedtuple
 
 import numpy as np
 from scipy.sparse import lil_matrix
 
 from .Assemblers import _basis_type_parser
-from .helpers import line_integral
+from .helpers import line_integral, copy_docstring_from
 
 
 class BoundaryConditions(object):
+    """
+    Defines all boundary conditions to be applied to a Poisson equation.
+
+    Takes in the coordinates for the boundary nodes and the boundary condition types and provides the treatments for
+    each of the boundry condition types.
+
+    Parameters
+    ----------
+    boundary_coords : array_like
+        List of coordinate values of the boundary nodes.
+    boundary_types : array_like of {'dirichlet`, 'neumann', 'robin'}
+        Boundary condition type for each coordinate in `boundary_coords`.
+    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
+        A :class:`Mesh` class defining the mesh and associated information matrices.
+    dirichlet_fun : function, optional
+        The Dirichlet boundary condition function `g`(`x`). Must be defined at the boundary values specified in
+        `boundary_coords`.
+    neumann_fun : function, optional
+        The Neumann boundary condition function `r`(`x`). Must be defined at the bounadry values specified in
+        `boundary_coords`.
+    robin_fun_q : function, optional
+        The Robin boundary condition function `q`(`x`). Must be defined at the boundary values specified in
+        `boundary_coords`.
+    robin_fun_p : function, optional
+        The Robin boundary condition function `p`(`x`). Must be defined at the boundary values specified in
+        `boundary_coords`.
+    coeff_fun : function, optional
+        Function name of the coefficient function `c`(`x`) in the Poisson equation. Required if Neumann or Robin
+        boundary conditions are included.
+
+    .. warning:: Both end point boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the
+       solution.
+
+    Notes
+    -----
+    - The Dirichlet boundary conditions are be defined as
+      .. math::
+
+        u(x) = g(x); x = a or b.
+
+    - The Neumann boundary conditions are defined as
+      .. math::
+
+        \frac{{\rm d}}{{\rm d} x} u(x) = r(x); x = a or b.
+
+    - The Robin boundary conditions are defined as
+      .. math::
+
+        \frac{{\rm d}}{{\rm d}x} u(x) + q(x) u(x) = p(x); x = a or b.
+    """
+
     def __init__(self, boundary_coords, boundary_types, mesh,
                  dirichlet_fun=None, neumann_fun=None, robin_fun_q=None, robin_fun_p=None, coeff_fun=None):
         self._boundary_node_coords = np.asanyarray(boundary_coords)
@@ -30,11 +82,13 @@ class BoundaryConditions(object):
         self._generate_boundary_nodes()
 
     def _generate_boundary_nodes(self):
+        """Creates the boundary node information matrix."""
+
         self._boundary_nodes = np.empty((2, len(self._boundary_node_types)))
         for i in range(len(self._boundary_node_types)):
             if isinstance(self._boundary_node_types[i], int):
                 b_type = _BOUNDARY_ALIAS.get(self._boundary_node_types[i], None)
-            elif isinstance(self._boundary_node_types, str):
+            elif isinstance(self._boundary_node_types[i], str):
                 bstr = self._boundary_node_types[i].lower()
                 b_type = _BOUNDARY_ALIAS.get(bstr, None)
             else:
@@ -42,13 +96,32 @@ class BoundaryConditions(object):
 
             self._boundary_nodes[0, i] = b_type
 
-        self._boundary_nodes[1, :] = [np.where(self._mesh.Pb == coord) for coord in self._boundary_node_coords]
+        self._boundary_nodes[1, :] = [np.where(self._mesh.Pb == coord)[0] for coord in self._boundary_node_coords]
 
     def treat_dirichlet(self, matrix, vector):
+        """
+        Overwrites the appropriate entries in the stiffness matrix and load vector.
+
+        Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.
+
+        Parameters
+        ----------
+        matrix : ndarray
+            Finite element stiffness matrix.
+        vector : ndarray
+            Finite element load vector.
+        Returns
+        -------
+        matrix : ndarray
+            Corrected finite element stiffness matrix with Dirichlet boundary conditions incorporated.
+        vector : ndarray
+            Corrected finite element load vector with Dirichlet boundary conditions incorporated.
+        """
+
         for k in range(self._boundary_nodes.shape[1]):
-            if self._boundary_nodes[1, k] == -1:  # Dirichlet boundary conditions
+            if self._boundary_nodes[0, k] == -1:  # Dirichlet boundary conditions
                 # Get the finite element node index from the information matrix
-                i = self._boundary_nodes[2, k]
+                i = self._boundary_nodes[1, k]
 
                 # Set the appropriate values in the stiffness matrix according to the boundary condition
                 matrix[i, :] = 0
@@ -60,8 +133,24 @@ class BoundaryConditions(object):
         return matrix, vector
 
     def treat_neumann(self, vector):
+        """
+        Overwrites the appropriate entries in the load vector.
+
+        Corrects the load vector to properly incorporate the boundary conditions.
+
+        Parameters
+        ----------
+        vector : ndarray
+            Finite element load vector.
+
+        Returns
+        -------
+        vector : ndarray
+            Corrected finite element load vector with Neumann boundary conditions incorporated.
+        """
+
         for k in range(self._boundary_nodes.shape[1]):
-            if self._boundary_nodes[1, k] == -2:  # Neumann boundary conditions
+            if self._boundary_nodes[0, k] == -2:  # Neumann boundary conditions
                 # For the 1D case, if the boundary node is on the left-hand end point we will subtract the boundary
                 # condition functions from the appropriate entries in the load vector. Otherwise, the boundary condition
                 # is on the right-hand end point and will be added to the appropriate entries.
@@ -71,7 +160,7 @@ class BoundaryConditions(object):
                     sign = 1
 
                 # Get the finite element node index from the information matrix
-                i = self._boundary_nodes[2, k]
+                i = self._boundary_nodes[1, k]
 
                 # Set the appropriate values in our vector according to the boundary conditions
                 vector[i] += sign * self._neumann_fun(self._mesh.Pb[i]) * self._coeff_fun(self._mesh.Pb[i])
@@ -79,8 +168,28 @@ class BoundaryConditions(object):
         return vector
 
     def treat_robin(self, matrix, vector):
+        """
+        Overwrites the appropriate entries in the stiffness matrix and load vector.
+
+        Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.
+
+        Parameters
+        ----------
+        matrix : ndarray
+            Finite element stiffness matrix.
+        vector : ndarray
+            Finite element load vector.
+
+        Returns
+        -------
+        matrix : ndarray
+            Corrected finite element stiffness matrix with Robin boundary conditions incorporated.
+        vector : ndarray
+            Corrected finite element load vector with Robin boundary conditions incorporated.
+        """
+
         for k in range(self._boundary_nodes.shape[1]):
-            if self._boundary_nodes[1, k] == -3:  # Robin boundary conditions
+            if self._boundary_nodes[0, k] == -3:  # Robin boundary conditions
                 # If the boundary node is on the left-hand end point we will subtract the boundary condition functions
                 # from the appropriate entries in the stiffness matrix or load vector. Otherwise, the boundary condition
                 # is on the right-hand end point and will be added to the appropriate entries.
@@ -90,7 +199,7 @@ class BoundaryConditions(object):
                     sign = 1
 
                 # Get the finite element node index form the information matrix
-                i = self._boundary_nodes[2, k]
+                i = self._boundary_nodes[1, k]
 
                 # Set the appropriate values in the matrix according to the boundary conditions
                 matrix[i, i] += sign * self._robin_fun_q(self._mesh.Pb[i]) * self._coeff_fun(self._mesh.Pb[i])
@@ -102,6 +211,65 @@ class BoundaryConditions(object):
 
 
 class BoundaryConditions2D(BoundaryConditions):
+    """
+    Defines all boundary conditions to be applied to a Poisson equation.
+
+    Takes in the coordinates for the boundary nodes and boundary edges and the boundary condition types for each and
+    provides the treatments for each of the boundry condition types.
+
+    Parameters
+    ----------
+    boundary_node_coords : array_like
+        List of coordinate values of the boundary nodes.
+    boundary_node_types : array_like of {'dirichlet`, 'neumann', 'robin'}
+        Boundary condition type for each coordinate in `boundary_node_coords`.
+    boundary_edge_coords : array_like
+        List of grid coordinates for edge nodes.
+    boundary_edge_types : array_like of {'dirichlet`, 'neumann', 'robin'}
+        Boundary condition type for each edge segment in `boundary_edge_coords`.
+    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
+        A :class:`Mesh` class defining the mesh and associated information matrices.
+    trial_basis, test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}, optional
+        A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases. If Neumann
+        boundary conditions included `test_basis` is required. If Robin boundary conditions included, then both bases
+        are required.
+    dirichlet_fun : function, optional
+        The Dirichlet boundary condition function `g`(`x`, `y`). Must be defined at the boundary values specified in
+        `boundary_coords`.
+    neumann_fun : function, optional
+        The Neumann boundary condition function `r`(`x`, `y`). Must be defined at the bounadry values specified in
+        `boundary_coords`.
+    robin_fun_q : function, optional
+        The Robin boundary condition function `q`(`x`, `y`). Must be defined at the boundary values specified in
+        `boundary_coords`.
+    robin_fun_p : function, optional
+        The Robin boundary condition function `p`(`x`, `y`). Must be defined at the boundary values specified in
+        `boundary_coords`.
+    coeff_fun : function, optional
+        Function name of the coefficient function `c`(`x`, `y`) in the Poisson equation. Required if Neumann or Robin
+        boundary conditions are included.
+
+    .. warning:: All edge boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the
+       solution.
+
+    Notes
+    -----
+    - The Dirichlet boundary conditions are be defined as
+      .. math::
+
+        u(x, y) = g(x, y); (x, y) \in \delta\Omega \setminus (\Gamma_1 \cup \Gamma_2).
+
+    - The Neumann boundary conditions are defined as
+      .. math::
+
+        \nabla u(x, y) \cdot \hat{\mathbf{n}} = r(x, y); (x, y) on \Gamma_1 \subseteq \delta\Omega,
+
+    - The Robin boundary conditions are defined as
+      .. math::
+
+        \nabla u(x, y) \cdot \hat{\mathbf{n}} + q(x, y) u(x, y) = p(x, y); \Gamma_2 \subseteq \delta\Omega.
+    """
+
     def __init__(self, boundary_node_coords, boundary_node_types,
                  boundary_edge_coords, boundary_edge_types,
                  mesh, trial_basis, test_basis,
@@ -120,6 +288,8 @@ class BoundaryConditions2D(BoundaryConditions):
         self._generate_boundary_edges()
 
     def _generate_boundary_nodes(self):
+        """Creates the boundary node information matrix."""
+
         # Initialize the information matrix
         self._boundary_nodes = np.empty((2, len(self._boundary_node_types)))
 
@@ -127,7 +297,7 @@ class BoundaryConditions2D(BoundaryConditions):
         for i in range(len(self._boundary_node_types)):
             if isinstance(self._boundary_node_types[i], int):
                 b_type = _BOUNDARY_ALIAS.get(self._boundary_node_types[i], None)
-            elif isinstance(self._boundary_node_types, str):
+            elif isinstance(self._boundary_node_types[i], str):
                 bstr = self._boundary_node_types[i].lower()
                 b_type = _BOUNDARY_ALIAS.get(bstr, None)
             else:
@@ -142,6 +312,8 @@ class BoundaryConditions2D(BoundaryConditions):
                                                     return_indices=True)[1]
 
     def _generate_boundary_edges(self):
+        """Creates the boundary edge information matrix."""
+
         # Initialize the information matrix
         self._boundary_edges = np.empty((4, len(self._boundary_edge_types)))
 
@@ -179,20 +351,21 @@ class BoundaryConditions2D(BoundaryConditions):
             self._boundary_edges[1, i] = element_idx
             self._boundary_edges[2:3, i] = edge_nodes
 
+    @copy_docstring_from(BoundaryConditions.treat_neumann)
     def treat_neumann(self, vector):
         # Initialize the Neumann vector `v`
         v = np.zeros_like(vector)
 
         for k in range(len(vector)):
-            if self._boundary_edges[1, k] == -2:  # Neumann boundary conditions
+            if self._boundary_edges[0, k] == -2:  # Neumann boundary conditions
                 # Get the element index associated with the kth edge
-                element_idx = self._boundary_edges[2, k]
+                element_idx = self._boundary_edges[1, k]
 
                 # Extract the global node coordinates to evaluate our integral on
                 vertices = self._mesh.get_vertices(element_idx)
 
                 # Extract the global node coordinates of the edge end points to evaluate our integral on
-                edge_endpts = self._mesh.P[:, self._boundary_edges[3:4, k]]
+                edge_endpts = self._mesh.P[:, self._boundary_edges[2:3, k]]
 
                 for beta in range(self._num_local_test):
                     def integrand_v(coords):
@@ -211,8 +384,9 @@ class BoundaryConditions2D(BoundaryConditions):
 
         return vector
 
+    @copy_docstring_from(BoundaryConditions.treat_robin)
     def treat_robin(self, matrix, vector):
-        # The number of bounadary edges
+        # The number of boundary edges
         num_boundary_edges = self._boundary_edges.shape[1]
 
         # Initialize the Robin vector `w` and matrix `r`
@@ -220,15 +394,15 @@ class BoundaryConditions2D(BoundaryConditions):
         r = lil_matrix(matrix.shape)
 
         for k in range(num_boundary_edges):
-            if self._boundary_edges[1, k] == -3:  # Robin boundary conditions
+            if self._boundary_edges[0, k] == -3:  # Robin boundary conditions
                 # Get the element index associated withthe kth edge
-                element_idx = self._boundary_edges[2, k]
+                element_idx = self._boundary_edges[1, k]
 
                 # Extract the global node coordinates to evaluate our integral on
                 vertices = self._mesh.get_vertices(element_idx)
 
                 # Extract the global node coordinates of the edge end points to evaluate our integral on
-                edge_endpts = self._mesh.P[:, self._boundary_edges[3:4, k]]
+                edge_endpts = self._mesh.P[:, self._boundary_edges[2:3, k]]
 
                 for beta in range(self._num_local_test):
                     def integrand_w(coords):
