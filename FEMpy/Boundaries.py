@@ -10,7 +10,7 @@ from collections import namedtuple
 import numpy as np
 from scipy.sparse import lil_matrix
 
-from .Assemblers import _basis_type_parser
+from .helpers import basis_type_parser
 from .helpers import line_integral, copy_docstring_from
 
 
@@ -23,12 +23,13 @@ class BoundaryConditions(object):
 
     Parameters
     ----------
-    boundary_coords : array_like
-        List of coordinate values of the boundary nodes.
-    boundary_types : array_like of {'dirichlet`, 'neumann', 'robin'}
-        Boundary condition type for each coordinate in `boundary_coords`.
     mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
         A :class:`Mesh` class defining the mesh and associated information matrices.
+    boundary_types : array_like of str {'dirichlet`, 'neumann', 'robin'}
+        Boundary condition type for each coordinate in `boundary_coords`.
+    boundary_coords : array_like, optional
+        List of coordinate values of the boundary nodes. If not specified, will use the boundary node coordinates stored
+        in `mesh`.
     dirichlet_fun : function, optional
         The Dirichlet boundary condition function `g`(`x`). Must be defined at the boundary values specified in
         `boundary_coords`.
@@ -66,11 +67,15 @@ class BoundaryConditions(object):
         \frac{{\rm d}}{{\rm d}x} u(x) + q(x) u(x) = p(x); x = a or b.
     """
 
-    def __init__(self, boundary_coords, boundary_types, mesh,
+    def __init__(self, mesh, boundary_types, boundary_coords=None,
                  dirichlet_fun=None, neumann_fun=None, robin_fun_q=None, robin_fun_p=None, coeff_fun=None):
-        self._boundary_node_coords = np.asanyarray(boundary_coords)
-        self._boundary_node_types = boundary_types
         self._mesh = mesh
+        self._boundary_node_types = boundary_types
+
+        if boundary_coords is not None:
+            self._boundary_node_coords = np.asanyarray(boundary_coords)
+        else:
+            self._boundary_node_coords = mesh.boundary_nodes.T.copy()
 
         # Initialize the functions
         self._dirchlet_fun = dirichlet_fun
@@ -121,7 +126,7 @@ class BoundaryConditions(object):
         for k in range(self._boundary_nodes.shape[1]):
             if self._boundary_nodes[0, k] == -1:  # Dirichlet boundary conditions
                 # Get the finite element node index from the information matrix
-                i = self._boundary_nodes[1, k]
+                i = int(self._boundary_nodes[1, k])
 
                 # Set the appropriate values in the stiffness matrix according to the boundary condition
                 matrix[i, :] = 0
@@ -219,16 +224,18 @@ class BoundaryConditions2D(BoundaryConditions):
 
     Parameters
     ----------
-    boundary_node_coords : array_like
-        List of coordinate values of the boundary nodes.
-    boundary_node_types : array_like of {'dirichlet`, 'neumann', 'robin'}
-        Boundary condition type for each coordinate in `boundary_node_coords`.
-    boundary_edge_coords : array_like
-        List of grid coordinates for edge nodes.
-    boundary_edge_types : array_like of {'dirichlet`, 'neumann', 'robin'}
-        Boundary condition type for each edge segment in `boundary_edge_coords`.
     mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
         A :class:`Mesh` class defining the mesh and associated information matrices.
+    boundary_node_types : array_like of str {'dirichlet`, 'neumann', 'robin'}
+        Boundary condition type for each coordinate in `boundary_node_coords`.
+    boundary_edge_types : array_like of str {'dirichlet`, 'neumann', 'robin'}
+        Boundary condition type for each edge segment in `boundary_edge_coords`.
+    boundary_node_coords : array_like, optional
+        List of coordinate values of the boundary nodes. If not specified, will use the boundary node coordinates stored
+        in `mesh`.
+    boundary_edge_coords : array_like, optional
+        List of grid coordinates for edge nodes. If not specified, will use the boundary edge coordinates stored in
+        `mesh`.
     trial_basis, test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}, optional
         A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases. If Neumann
         boundary conditions included `test_basis` is required. If Robin boundary conditions included, then both bases
@@ -270,21 +277,27 @@ class BoundaryConditions2D(BoundaryConditions):
         \nabla u(x, y) \cdot \hat{\mathbf{n}} + q(x, y) u(x, y) = p(x, y); \Gamma_2 \subseteq \delta\Omega.
     """
 
-    def __init__(self, boundary_node_coords, boundary_node_types,
-                 boundary_edge_coords, boundary_edge_types,
-                 mesh, trial_basis, test_basis,
+    def __init__(self, mesh, boundary_node_types, boundary_edge_types,
+                 boundary_node_coords=None, boundary_edge_coords=None,
+                 trial_basis=None, test_basis=None,
                  dirichlet_fun=None, neumann_fun=None, robin_fun_q=None, robin_fun_p=None, coeff_fun=None):
-        super().__init__(boundary_node_coords, boundary_node_types, mesh,
+        super().__init__(mesh, boundary_node_types, boundary_node_coords,
                          dirichlet_fun, neumann_fun, robin_fun_q, robin_fun_p, coeff_fun)
+        if boundary_edge_coords is not None:
+            self._boundary_edge_coords = np.asanyarray(boundary_edge_coords)
+        else:
+            self._boundary_edge_coords = mesh.boundary_edges.T.copy()
 
-        self._boundary_edge_coords = np.asanyarray(boundary_edge_coords)
         self._boundary_edge_types = boundary_edge_types
         self._trial_basis = trial_basis
         self._test_basis = test_basis
 
-        self._num_local_trial = _basis_type_parser(self._trial_basis, self._mesh)[1]
-        self._num_local_test = _basis_type_parser(self._test_basis, self._mesh)[1]
+        # Get the number of basis functions.
+        if self._test_basis is not None and self._trial_basis is not None:
+            self._num_local_trial = basis_type_parser(self._trial_basis.basis_type, self._mesh)[1]
+            self._num_local_test = basis_type_parser(self._test_basis.basis_type, self._mesh)[1]
 
+        # Generate the boundary edge informaiton matrix
         self._generate_boundary_edges()
 
     def _generate_boundary_nodes(self):
@@ -295,7 +308,7 @@ class BoundaryConditions2D(BoundaryConditions):
 
         # Iterate through the input boundary types, standardize the type code and store the code in the matrix
         for i in range(len(self._boundary_node_types)):
-            if isinstance(self._boundary_node_types[i], int):
+            if isinstance(self._boundary_node_types[i], np.int64):
                 b_type = _BOUNDARY_ALIAS.get(self._boundary_node_types[i], None)
             elif isinstance(self._boundary_node_types[i], str):
                 bstr = self._boundary_node_types[i].lower()
@@ -307,8 +320,9 @@ class BoundaryConditions2D(BoundaryConditions):
 
         dtype_nodes = {'names': ['f{}'.format(i) for i in range(self._mesh.Pb.shape[0])],
                        'formats': self._mesh.Pb.shape[0] * [self._mesh.Pb.dtype]}
-        self._boundary_nodes[1, :] = np.intersect1d(self._mesh.Pb.T.copy().view(dtype_nodes),
-                                                    self._boundary_node_coords.view(dtype_nodes),
+        for i in range(self._boundary_nodes.shape[1]):
+            self._boundary_nodes[1, i] = np.intersect1d(self._mesh.Pb.T.copy().view(dtype_nodes),
+                                                    self._boundary_node_coords.view(dtype_nodes)[i,:],
                                                     return_indices=True)[1]
 
     def _generate_boundary_edges(self):
@@ -319,9 +333,9 @@ class BoundaryConditions2D(BoundaryConditions):
 
         # Iterate through the input boundary types, standardize the type code and store the code in the matrix
         for i in range(len(self._boundary_edge_types)):
-            if isinstance(self._boundary_edge_types[i], int):
+            if isinstance(self._boundary_edge_types[i], np.int64):
                 b_type = _BOUNDARY_ALIAS.get(self._boundary_edge_types[i], None)
-            elif isinstance(self._boundary_edge_types, str):
+            elif isinstance(self._boundary_edge_types[i], str):
                 bstr = self._boundary_edge_types[i].lower()
                 b_type = _BOUNDARY_ALIAS.get(bstr, None)
             else:
@@ -332,31 +346,33 @@ class BoundaryConditions2D(BoundaryConditions):
         # Find the node index of the input edge coordinates using the P matrix
         dtype_edges = {'names': ['f{}'.format(i) for i in range(self._mesh.P.shape[0])],
                        'formats': self._mesh.P.shape[0] * [self._mesh.P.dtype]}
-        node_idx = np.intersect1d(self._mesh.P.T.copy().view(dtype_edges),
-                                  self._boundary_edge_coords.view(dtype_edges),
+        node_idx = np.empty(self._boundary_edge_coords.shape[0])
+        for i in range(len(node_idx)):
+            node_idx[i] = np.intersect1d(self._mesh.P.T.copy().view(dtype_edges),
+                                  self._boundary_edge_coords[i,:].view(dtype_edges),
                                   return_indices=True)[1]
-        node_idx = node_idx[np.newaxis].T
+        # node_idx = node_idx[np.newaxis].T
 
         # Search in the T matrix for the column containing the node indices for each edge
         for i in range(len(node_idx)-1):
             # The edge nodes are adjacent node indices in our `node_idx` vector
-            edge_nodes = node_idx[i:i+1]
+            edge_nodes = node_idx[i:i+2]
 
             # Check the membership of the entries of `edge nodes` in T.
             # The column of T containing both entries will be the finite element index associated with the edge end
             # points in `edge nodes`.
-            element_idx = np.where(np.sum(np.isin(self._mesh.T, edge_nodes), axis=0) == 2)
+            element_idx = np.where(np.sum(np.isin(self._mesh.T, edge_nodes), axis=0) == 2)[0]
 
             # Store the finite element index and edge end points into the matrix
             self._boundary_edges[1, i] = element_idx
-            self._boundary_edges[2:3, i] = edge_nodes
+            self._boundary_edges[2:4, i] = edge_nodes
 
     @copy_docstring_from(BoundaryConditions.treat_neumann)
     def treat_neumann(self, vector):
         # Initialize the Neumann vector `v`
         v = np.zeros_like(vector)
 
-        for k in range(len(vector)):
+        for k in range(self._boundary_edges.shape[1]):
             if self._boundary_edges[0, k] == -2:  # Neumann boundary conditions
                 # Get the element index associated with the kth edge
                 element_idx = self._boundary_edges[1, k]

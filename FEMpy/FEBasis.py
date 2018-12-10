@@ -38,7 +38,7 @@ class IntervalBasis1D(object):
     """
 
     def __init__(self, basis_type):
-        if isinstance(basis_type, int):
+        if isinstance(basis_type, np.int64):
             self._basis_type = _BASIS_ALIAS.get(basis_type, None)
         elif isinstance(basis_type, str):
             bstr = basis_type.lower()
@@ -237,9 +237,11 @@ class TriangularBasis2D(IntervalBasis1D):
 
                 (1, 0, 0): lambda x_hat, y_hat: x_hat,  # Psi_hat_1
                 (1, 1, 0): lambda x_hat, y_hat: 1,  # diff(Psi_hat_1, x_hat)
+                (1, 0, 1): lambda x_hat, y_hat: 0,
 
                 (2, 0, 0): lambda x_hat, y_hat: y_hat,  # Psi_hat_2
-                (2, 0, 1): lambda x_hat, y_hat: 1  # diff(Psi_hat_2, y_hat)
+                (2, 1, 0): lambda x_hat, y_hat: 0,
+                (2, 0, 1): lambda x_hat, y_hat: 1,  # diff(Psi_hat_2, y_hat)
             }
 
             ref_basis = basis_dispatcher.get((self._basis_idx,
@@ -419,8 +421,8 @@ BasisInfo = namedtuple('BasisInfo', 'aka')
 _BASIS_TYPE = {
     101: BasisInfo(aka=[101, 'linear']),
     102: BasisInfo(aka=[102, 'quadratic']),
-    201: BasisInfo(aka=[201, 'linear2D_tri']),
-    202: BasisInfo(aka=[202, 'quadratic2D_tri'])
+    201: BasisInfo(aka=[201, 'linear2d_tri']),
+    202: BasisInfo(aka=[202, 'quadratic2d_tri'])
 }
 
 _BASIS_ALIAS = dict((alias, name)

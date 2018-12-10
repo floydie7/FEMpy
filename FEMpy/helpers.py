@@ -68,7 +68,7 @@ def dbquad_triangle(integrand, vertices, **kwargs):
         coords = (x, y)
 
         # Redefine our integrand
-        integral_value = integrand(coords, vertices, **kwargs) * det_jacobian(u, v, vertices)
+        integral_value = integrand(coords, **kwargs) * det_jacobian(u, v, vertices)
 
         return integral_value
 
@@ -137,3 +137,63 @@ def copy_docstring_from(source):
         func.__doc__ = source.__doc__
         return func
     return wrapper
+
+def basis_type_parser(basis_type, mesh):
+    """
+    Parses the basis type and mesh information.
+
+    Uses the `basis_type` and the `mesh` information to determine the number of unknowns or equations for our linear
+    system as well as the number of local basis functions in each element.
+
+    Parameters
+    ----------
+    basis_type : int
+        A integer code identifying the basis type.
+    mesh : :class: `FEMpy.Mesh`
+        A :class: `Mesh` class defining the mesh and corresponding information matrices.
+
+    Returns
+    -------
+    num_unknowns_eqs : int
+        Number of unknown variables or equations in linear system.
+    num_local_basis_fns : int
+        Number of local basis functions in finite element.
+    """
+    if basis_type == 101:
+        # Pull the number of elements from the mesh information
+        num_elements_x = mesh.num_elements_x
+
+        # Determine the number of unknown variables and basis functions needed
+        num_unknowns_eqs = num_elements_x + 1
+        num_local_basis_fns = 2
+
+    elif basis_type == 102:
+        # Pull the number of elements from the mesh information
+        num_elements_x = mesh.num_elements_x
+
+        # Determine the number of unknown variables and basis functions needed
+        num_unknowns_eqs = 2 * num_elements_x + 1
+        num_local_basis_fns = 3
+
+    elif basis_type == 201:
+        # Pull the number of elements from the mesh information
+        num_elements_x = mesh.num_elements_x
+        num_elements_y = mesh.num_elements_y
+
+        # Determine the number of unknown variables and basis functions needed
+        num_unknowns_eqs = (num_elements_x + 1) * (num_elements_y + 1)
+        num_local_basis_fns = 3
+
+    elif basis_type == 202:
+        # Pull the number of elements from the mesh information
+        num_elements_x = mesh.num_elements_x
+        num_elements_y = mesh.num_elements_y
+
+        # Determine the number of unknown variables and basis functions needed
+        num_unknowns_eqs = (2 * num_elements_x + 1) * (2 * num_elements_y + 1)
+        num_local_basis_fns = 6
+
+    else:
+        raise ValueError('Unknown basis type.')
+
+    return num_unknowns_eqs, num_local_basis_fns

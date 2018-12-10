@@ -8,6 +8,7 @@ Contains the Finite Element Method Solvers.
 import numpy as np
 from scipy.integrate import quad
 from scipy.sparse import linalg
+from scipy.special import roots_legendre
 
 from .Assemblers import assemble_matrix, assemble_vector
 from .helpers import dbquad_triangle, copy_docstring_from
@@ -41,12 +42,14 @@ class Poisson1D(object):
     >>> import numpy as np
     >>> from FEMpy import Interval1D, IntervalBasis1D, BoundaryConditions, Poisson1D
     >>> mesh = Interval1D(0, 1, h=1/2, basis_type='linear')
-    >>> test_basis = IntervalBasis1D('linear')
-    >>> trial_basis = IntervalBasis1D('linear')
+    >>> basis = IntervalBasis1D('linear')
     >>> dirichlet_funct = lambda x: 0 if x == 0 else np.cos(1)
+    >>> bcs = BoundaryConditions(mesh, ('dirichlet', 'dirichlet'), dirichlet_fun=dirichlet_funct)
     >>> coefficient_funct = lambda x: np.exp(x)
     >>> source_funct = lambda x: -np.exp(x) * (np.cos(x) - 2*np.sin(x) - x*np.cos(x) - x*np.sin(x))
-    >>>
+    >>> poisson_eq = Poisson1D(mesh, basis, basis, bcs)
+    >>> print(poisson_eq.solve(coefficient_funct, source_funct))
+    >>> array([0.        , 0.44814801, 0.54030231])
 
     """
 
@@ -97,6 +100,10 @@ class Poisson1D(object):
         load_vector = self._boundary_conditions.treat_neumann(load_vector)
         stiffness_matrix, load_vector = self._boundary_conditions.treat_dirichlet(stiffness_matrix, load_vector)
 
+        # Convert the stiffness matrix to a compressed sparse row matrix as it will be more efficient for matrix-vector
+        # products
+        stiffness_matrix = stiffness_matrix.tocsr()
+
         # Solve the system for our result
         self._nodal_solution = linalg.spsolve(stiffness_matrix, load_vector)
 
@@ -135,7 +142,8 @@ class Poisson1D(object):
         else:
             raise ValueError('Unknown basis type')
 
-        fun_value = np.sum([local_sol[k] * self._fe_test(x, vertices, basis_idx=k, derivative_order=derivative_order)
+        fun_value = np.sum([local_sol[k] * self._fe_test.fe_local_basis(x, vertices, basis_idx=k,
+                                                                         derivative_order=derivative_order)
                             for k in range(num_local_basis)])
 
         return fun_value
@@ -161,7 +169,7 @@ class Poisson1D(object):
         num_elements = self._mesh.num_elements_x
 
         # Initialize the element maximum error vector
-        element_max = np.empty((1, num_elements))
+        element_max = np.empty(num_elements)
         for n in range(num_elements):
             # Extract the global node coordinates for the element E_n
             vertices = self._mesh.get_vertices(n)
@@ -170,7 +178,8 @@ class Poisson1D(object):
             local_sol = self._nodal_solution[self._mesh.Tb[:, n]]
 
             # Generate grid of points local to the element
-            element_points = np.linspace(vertices[0], vertices[1])
+            node_points = roots_legendre(5)[0]
+            element_points = (vertices[1] - vertices[0]) / 2 * node_points + (vertices[0] + vertices[1]) / 2
 
             # Compute the error on each evaluation node point in the element
             element_error = np.abs(exact_sol(element_points) - self.fe_solution(element_points, local_sol, vertices, 0))
@@ -211,7 +220,7 @@ class Poisson1D(object):
         num_elements = self._mesh.num_elements_x
 
         # Initialize the elment error vector
-        element_error = np.empty((1, num_elements))
+        element_error = np.empty(num_elements)
         for n in range(num_elements):
             # Extract the global node coordinates for the element E_n
             vertices = self._mesh.get_vertices(n)
@@ -285,6 +294,33 @@ class Poisson2D(Poisson1D):
         A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases.
     boundary_conditions : :class: `FEMpy.Boundaries.BoundaryConditions2D`
         A :class: `BoundaryConditions` class defining the boundary conditions on the domain.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from FEMpy import TriangularMesh2D, TriangularBasis2D, BoundaryConditions2D, Poisson2D
+    >>> left, right, bottom, top = -1, 1, -1, 1
+    >>> h = 1
+    >>> def dirichlet_funct(coord):
+    >>>     x, y = coord
+    >>>     if x == -1:
+    >>>         return np.exp(-1 + y)
+    >>>     elif x == 1:
+    >>>         return np.exp(1 + y)
+    >>>     elif y == 1:
+    >>>         return np.exp(x + 1)
+    >>>     elif y == -1:
+    >>>         return np.exp(x - 1)
+    >>> coeff_funct = lambda coord: 1
+    >>> source_funct = lambda coord: -2 * np.exp(coord[0] + coord[1])
+    >>> mesh = TriangularMesh2D(left, right, bottom, top, h, h, 'linear')
+    >>> basis = TriangularBasis2D('linear')
+    >>> boundary_node_types = ['dirichlet'] * mesh.boundary_nodes.shape[1]
+    >>> boundary_edge_types = ['dirichlet'] * (mesh.boundary_edges.shape[1]-1)
+    >>> bcs = BoundaryConditions2D(mesh, boundary_node_types, boundary_edge_types, dirichlet_fun=dirichlet_funct)
+    >>> poisson_eq = Poisson2D(mesh, basis, basis, bcs)
+    >>> poisson_eq.solve(coeff_funct, source_funct)
+    >>> array([0.13533528, 0.36787944, 1., 0.36787944, 1.,  2.71828183, 1., 2.71828183, 7.3890561])
     """
 
     def __init__(self, mesh, fe_trial_basis, fe_test_basis, boundary_conditions):
@@ -315,7 +351,7 @@ class Poisson2D(Poisson1D):
                                             mesh=self._mesh,
                                             trial_basis=self._fe_trial, test_basis=self._fe_test,
                                             derivative_order_trial=(0, 1), derivative_order_test=(0, 1))
-        stiffness_matrix = stiffness_matrix1 + stiffness_matrix2
+        stiffness_matrix = (stiffness_matrix1.tocsr() + stiffness_matrix2.tocsr()).tolil()
 
         # Create our load vector
         load_vector = assemble_vector(source_fun,
@@ -328,8 +364,14 @@ class Poisson2D(Poisson1D):
         load_vector = self._boundary_conditions.treat_neumann(load_vector)
         stiffness_matrix, load_vector = self._boundary_conditions.treat_dirichlet(stiffness_matrix, load_vector)
 
+        # Convert the stiffness matrix to a compressed sparse row matrix as it will be more efficient for matrix-vector
+        # products
+        stiffness_matrix = stiffness_matrix.tocsr()
+
         # Solve the system for our result
-        self._nodal_solution = linalg.solve(stiffness_matrix, load_vector)
+        self._nodal_solution = linalg.spsolve(stiffness_matrix, load_vector)
+
+        return self._nodal_solution
 
     def fe_solution(self, coords, local_sol, vertices, derivative_order):
         """
