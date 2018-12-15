@@ -12,7 +12,7 @@ From Source
 FEMpy is developed here on GitHub. To get the latest and cutting edge version, it is
 easy to clone the source repository and install from there.
 
-.. code-block:: bash
+
 
     git clone https://github.com/floydie7/FEMpy.git
     cd FEMpy
