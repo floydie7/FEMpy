@@ -1,0 +1,379 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Finite Element Bases &mdash; FEMpy 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="FEMpy 1.0 documentation" href="../index.html"/>
+        <link rel="next" title="Boundary Conditions" href="boundary.html"/>
+        <link rel="prev" title="Mesh Generation" href="mesh.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> FEMpy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mesh.html">Mesh Generation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Finite Element Bases</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#interval-element-basis-functions">Interval Element Basis Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#d-triangular-element-basis-functions">2D Triangular Element Basis Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="boundary.html">Boundary Conditions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="solvers.html">Finite Element Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="assemblers.html">Assemblers</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/triangular2d.html">2D Poisson Equation with Triangular Elements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/errors.html">Error calculations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">FEMpy</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Finite Element Bases</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/user/basis.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="finite-element-bases">
+<span id="basis"></span><h1>Finite Element Bases<a class="headerlink" href="#finite-element-bases" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="interval-element-basis-functions">
+<h2>Interval Element Basis Functions<a class="headerlink" href="#interval-element-basis-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="FEMpy.FEBasis.IntervalBasis1D">
+<em class="property">class </em><code class="descclassname">FEMpy.FEBasis.</code><code class="descname">IntervalBasis1D</code><span class="sig-paren">(</span><em>basis_type</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/FEBasis.html#IntervalBasis1D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.FEBasis.IntervalBasis1D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a finite element basis function set on a one-dimensional interval.</p>
+<p>Creates a complete set of finite element basis functions for a one-dimensional domain of either linear or quadratic
+basis types.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>basis_type</strong> (<em>{101, ‘linear’, 102, ‘quadratic’}</em>) – Finite element basis type. Can either be called as a integer code or a string identifier to indicate the
+type of basis function we are using.</p>
+<ul class="last simple">
+<li>101, ‘linear’ : 1-dimensional, linear basis.</li>
+<li>102, ‘quadratic’ : 1-dimensional, quadratic basis.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="FEMpy.FEBasis.IntervalBasis1D.basis_type">
+<code class="descname">basis_type</code><a class="headerlink" href="#FEMpy.FEBasis.IntervalBasis1D.basis_type" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – Basis type standardized to an integer code.</p>
+</dd></dl>
+
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.7)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">TypeError</span></code></a> – If the basis type is not a string identifier or an integer code.</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt>
+<code class="descname">basis_type</code></dt>
+<dd><p>Basis type standardized to an integer code.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.FEBasis.IntervalBasis1D.fe_local_basis">
+<code class="descname">fe_local_basis</code><span class="sig-paren">(</span><em>x</em>, <em>vertices</em>, <em>basis_idx</em>, <em>derivative_order</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/FEBasis.html#IntervalBasis1D.fe_local_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.FEBasis.IntervalBasis1D.fe_local_basis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the finite element local basis functions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>float or array_like</em>) – A value or array of points to evaluate the function on.</li>
+<li><strong>vertices</strong> (<em>array_like</em>) – Global node coordinates for the mesh element <cite>En</cite>.</li>
+<li><strong>basis_idx</strong> (<em>int</em>) – Local basis index value.</li>
+<li><strong>derivative_order</strong> (<em>int</em>) – The derivative order to take the basis function to.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The local basis function (or derivative of funtion) evaluated at the points in <cite>x</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="d-triangular-element-basis-functions">
+<h2>2D Triangular Element Basis Functions<a class="headerlink" href="#d-triangular-element-basis-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="FEMpy.FEBasis.TriangularBasis2D">
+<em class="property">class </em><code class="descclassname">FEMpy.FEBasis.</code><code class="descname">TriangularBasis2D</code><span class="sig-paren">(</span><em>basis_type</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/FEBasis.html#TriangularBasis2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.FEBasis.TriangularBasis2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a finite element basis function set on a two-dimensional domian with triangular elements.</p>
+<p>Creates a complete set of finite element basis functions for a two-dimensional domain with triangular elements
+of either linear or quadratic basis types.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>basis_type</strong> (<em>{201, ‘linear’, ‘linear2D_tri’, 202, ‘quadratic’, ‘quadratic2D_tri’}</em>)</li>
+<li><strong>Finite element basis type. Can either be called as a integer code or a string identifier to indicate the</strong></li>
+<li><strong>type of basis function we are using.</strong></li>
+<li><strong>- 201, ‘linear’, ‘linear2D_tri</strong> (<em>1-dimensional, linear basis on triangular elements.</em>)</li>
+<li><strong>- 202, ‘quadratic’, ‘quadratic2D_tri</strong> (<em>1-dimensional, quadratic basis on triangular elements.</em>)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="FEMpy.FEBasis.TriangularBasis2D.basis_type">
+<code class="descname">basis_type</code><a class="headerlink" href="#FEMpy.FEBasis.TriangularBasis2D.basis_type" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – Basis type standardized to an integer code.</p>
+</dd></dl>
+
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.7)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">TypeError</span></code></a> – If the basis type is not a string identifier or an integer code.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="FEMpy.FEBasis.TriangularBasis2D.fe_local_basis">
+<code class="descname">fe_local_basis</code><span class="sig-paren">(</span><em>coords</em>, <em>vertices</em>, <em>basis_idx</em>, <em>derivative_order</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/FEBasis.html#TriangularBasis2D.fe_local_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.FEBasis.TriangularBasis2D.fe_local_basis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the finite element local basis functions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coords</strong> (<em>array_like</em>) – The x and y coordinate values to evaluate the function on. e.g., <code class="docutils literal notranslate"><span class="pre">(`x`,</span> <span class="pre">`y`)</span></code>.</li>
+<li><strong>vertices</strong> (<em>array_like</em>) – Global node coordinates for all vertices of triangular mesh nodes on the mesh element <cite>En</cite>.</li>
+<li><strong>basis_idx</strong> (<em>int</em>) – Local basis index value.</li>
+<li><strong>derivative_order</strong> (<em>tuple of int</em>) – The derivative orders to take the basis function to. Should be specified as a tuple with the
+orders corresponding to the coordinate axes in the basis functions. e.g., <code class="docutils literal notranslate"><span class="pre">(`x_order`,</span> <span class="pre">`y_order`)</span></code>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The local basis function (or derivative of function) evaluated at the points in <cite>coords</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="boundary.html" class="btn btn-neutral float-right" title="Boundary Conditions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="mesh.html" class="btn btn-neutral" title="Mesh Generation" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Benjamin Floyd.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

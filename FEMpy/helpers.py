@@ -6,6 +6,7 @@ Contains helper functions.
 """
 
 import numpy as np
+from matplotlib.path import Path
 from scipy.integrate import quad, dblquad
 
 
@@ -108,10 +109,10 @@ def line_integral(integrand, endpoints, **kwargs):
         The resultant integral value.
     """
     # Extract our end point coordinates
-    x0 = endpoints[1, 1]
-    y0 = endpoints[2, 1]
-    x1 = endpoints[1, 2]
-    y1 = endpoints[2, 2]
+    x0 = endpoints[0, 0]
+    y0 = endpoints[1, 0]
+    x1 = endpoints[0, 1]
+    y1 = endpoints[1, 1]
 
     # Parameterize our curve
     def x(t):
@@ -197,3 +198,37 @@ def basis_type_parser(basis_type, mesh):
         raise ValueError('Unknown basis type.')
 
     return num_unknowns_eqs, num_local_basis_fns
+
+def sample_points_in_triangle(n):
+    """
+    Generates points in a unit triangular domain
+
+    Parameters
+    ----------
+    n : int
+        number of points to sample
+
+    Returns
+    -------
+    ndarray
+        Array of sampled point coordinates
+    """
+
+    v1 = (0, 1)
+    v2 = (1, 0)
+
+    points = []
+    while len(points) < n:
+        a1 = np.random.rand(1)
+        a2 = np.random.rand(1)
+
+        x = a1 * v1[0] + a2 * v2[0]
+        y = a1 * v1[1] + a2 * v2[1]
+
+        tri = Path([(0, 0), v1, v2])
+
+        for xx, yy in zip(x, y):
+            if tri.contains_point((xx, yy)):
+                points.append((xx, yy))
+
+    return np.array(points).T

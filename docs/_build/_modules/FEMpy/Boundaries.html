@@ -1,0 +1,687 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>FEMpy.Boundaries &mdash; FEMpy 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="FEMpy 1.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> FEMpy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../user/install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/mesh.html">Mesh Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/basis.html">Finite Element Bases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/boundary.html">Boundary Conditions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/solvers.html">Finite Element Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/assemblers.html">Assemblers</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/triangular2d.html">2D Poisson Equation with Triangular Elements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/errors.html">Error calculations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">FEMpy</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>FEMpy.Boundaries</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for FEMpy.Boundaries</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Boundaries.py</span>
+<span class="sd">Author: Benjamin Floyd</span>
+
+<span class="sd">Contains classes to define and treat boundary conditions.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">lil_matrix</span>
+
+<span class="kn">from</span> <span class="nn">.helpers</span> <span class="k">import</span> <span class="n">basis_type_parser</span>
+<span class="kn">from</span> <span class="nn">.helpers</span> <span class="k">import</span> <span class="n">line_integral</span><span class="p">,</span> <span class="n">copy_docstring_from</span>
+
+
+<div class="viewcode-block" id="BoundaryConditions"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions">[docs]</a><span class="k">class</span> <span class="nc">BoundaryConditions</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines all boundary conditions to be applied to a Poisson equation.</span>
+
+<span class="sd">    Takes in the coordinates for the boundary nodes and the boundary condition types and provides the treatments for</span>
+<span class="sd">    each of the boundry condition types.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}</span>
+<span class="sd">        A :class:`Mesh` class defining the mesh and associated information matrices.</span>
+<span class="sd">    boundary_types : array_like of str {&#39;dirichlet`, &#39;neumann&#39;, &#39;robin&#39;}</span>
+<span class="sd">        Boundary condition type for each coordinate in `boundary_coords`.</span>
+<span class="sd">    boundary_coords : array_like, optional</span>
+<span class="sd">        List of coordinate values of the boundary nodes. If not specified, will use the boundary node coordinates stored</span>
+<span class="sd">        in `mesh`.</span>
+<span class="sd">    dirichlet_fun : function, optional</span>
+<span class="sd">        The Dirichlet boundary condition function `g`(`x`). Must be defined at the boundary values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    neumann_fun : function, optional</span>
+<span class="sd">        The Neumann boundary condition function `r`(`x`). Must be defined at the bounadry values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    robin_fun_q : function, optional</span>
+<span class="sd">        The Robin boundary condition function `q`(`x`). Must be defined at the boundary values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    robin_fun_p : function, optional</span>
+<span class="sd">        The Robin boundary condition function `p`(`x`). Must be defined at the boundary values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    coeff_fun : function, optional</span>
+<span class="sd">        Function name of the coefficient function `c`(`x`) in the Poisson equation. Required if Neumann or Robin</span>
+<span class="sd">        boundary conditions are included.</span>
+
+
+<span class="sd">    .. warning:: Both end point boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the</span>
+<span class="sd">        solution.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The Dirichlet boundary conditions are be defined as</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">        u(x) = g(x); x = a \text{ or } b.</span>
+
+<span class="sd">    - The Neumann boundary conditions are defined as</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">        \frac{{\rm d}}{{\rm d} x} u(x) = r(x); x = a \text{ or } b.</span>
+
+<span class="sd">    - The Robin boundary conditions are defined as</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">        \frac{{\rm d}}{{\rm d}x} u(x) + q(x) u(x) = p(x); x = a \text{ or } b.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">boundary_types</span><span class="p">,</span> <span class="n">boundary_coords</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dirichlet_fun</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">neumann_fun</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">robin_fun_q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">robin_fun_p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coeff_fun</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span> <span class="o">=</span> <span class="n">boundary_types</span>
+
+        <span class="k">if</span> <span class="n">boundary_coords</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">boundary_coords</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_coords</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundary_nodes</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Initialize the functions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dirchlet_fun</span> <span class="o">=</span> <span class="n">dirichlet_fun</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_neumann_fun</span> <span class="o">=</span> <span class="n">neumann_fun</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_robin_fun_q</span> <span class="o">=</span> <span class="n">robin_fun_q</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_robin_fun_p</span> <span class="o">=</span> <span class="n">robin_fun_p</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span> <span class="o">=</span> <span class="n">coeff_fun</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generate_boundary_nodes</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_generate_boundary_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates the boundary node information matrix.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int64&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="n">b_type</span> <span class="o">=</span> <span class="n">_BOUNDARY_ALIAS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">bstr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="n">b_type</span> <span class="o">=</span> <span class="n">_BOUNDARY_ALIAS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bstr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Boundary Type must be a string identifier or an integer code.&#39;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">b_type</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span> <span class="o">==</span> <span class="n">coord</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_coords</span><span class="p">]</span>
+
+<div class="viewcode-block" id="BoundaryConditions.treat_dirichlet"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions.treat_dirichlet">[docs]</a>    <span class="k">def</span> <span class="nf">treat_dirichlet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overwrites the appropriate entries in the stiffness matrix and load vector.</span>
+
+<span class="sd">        Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        matrix : ndarray</span>
+<span class="sd">            Finite element stiffness matrix.</span>
+<span class="sd">        vector : ndarray</span>
+<span class="sd">            Finite element load vector.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        matrix : ndarray</span>
+<span class="sd">            Corrected finite element stiffness matrix with Dirichlet boundary conditions incorporated.</span>
+<span class="sd">        vector : ndarray</span>
+<span class="sd">            Corrected finite element load vector with Dirichlet boundary conditions incorporated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>  <span class="c1"># Dirichlet boundary conditions</span>
+                <span class="c1"># Get the finite element node index from the information matrix</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="p">])</span>
+
+                <span class="c1"># Set the appropriate values in the stiffness matrix according to the boundary condition</span>
+                <span class="n">matrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">matrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+                <span class="c1"># Set the appropriate values in the load vector according to the boundary condition</span>
+                <span class="n">vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dirchlet_fun</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">vector</span></div>
+
+<div class="viewcode-block" id="BoundaryConditions.treat_neumann"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions.treat_neumann">[docs]</a>    <span class="k">def</span> <span class="nf">treat_neumann</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overwrites the appropriate entries in the load vector.</span>
+
+<span class="sd">        Corrects the load vector to properly incorporate the boundary conditions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vector : ndarray</span>
+<span class="sd">            Finite element load vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        vector : ndarray</span>
+<span class="sd">            Corrected finite element load vector with Neumann boundary conditions incorporated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span>  <span class="c1"># Neumann boundary conditions</span>
+                <span class="c1"># For the 1D case, if the boundary node is on the left-hand end point we will subtract the boundary</span>
+                <span class="c1"># condition functions from the appropriate entries in the load vector. Otherwise, the boundary condition</span>
+                <span class="c1"># is on the right-hand end point and will be added to the appropriate entries.</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span>
+
+                <span class="c1"># Get the finite element node index from the information matrix</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="p">])</span>
+
+                <span class="c1"># Set the appropriate values in our vector according to the boundary conditions</span>
+                <span class="n">vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">sign</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_neumann_fun</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">vector</span></div>
+
+<div class="viewcode-block" id="BoundaryConditions.treat_robin"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions.treat_robin">[docs]</a>    <span class="k">def</span> <span class="nf">treat_robin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overwrites the appropriate entries in the stiffness matrix and load vector.</span>
+
+<span class="sd">        Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        matrix : ndarray</span>
+<span class="sd">            Finite element stiffness matrix.</span>
+<span class="sd">        vector : ndarray</span>
+<span class="sd">            Finite element load vector.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        matrix : ndarray</span>
+<span class="sd">            Corrected finite element stiffness matrix with Robin boundary conditions incorporated.</span>
+<span class="sd">        vector : ndarray</span>
+<span class="sd">            Corrected finite element load vector with Robin boundary conditions incorporated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">3</span><span class="p">:</span>  <span class="c1"># Robin boundary conditions</span>
+                <span class="c1"># If the boundary node is on the left-hand end point we will subtract the boundary condition functions</span>
+                <span class="c1"># from the appropriate entries in the stiffness matrix or load vector. Otherwise, the boundary condition</span>
+                <span class="c1"># is on the right-hand end point and will be added to the appropriate entries.</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span>
+
+                <span class="c1"># Get the finite element node index form the information matrix</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="p">])</span>
+
+                <span class="c1"># Set the appropriate values in the matrix according to the boundary conditions</span>
+                <span class="n">matrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">sign</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_robin_fun_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+                <span class="c1"># Set the appropriate values in the vector according to the boundary conditions</span>
+                <span class="n">vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">sign</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_robin_fun_p</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">vector</span></div></div>
+
+
+<div class="viewcode-block" id="BoundaryConditions2D"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions2D">[docs]</a><span class="k">class</span> <span class="nc">BoundaryConditions2D</span><span class="p">(</span><span class="n">BoundaryConditions</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines all boundary conditions to be applied to a Poisson equation.</span>
+
+<span class="sd">    Takes in the coordinates for the boundary nodes and boundary edges and the boundary condition types for each and</span>
+<span class="sd">    provides the treatments for each of the boundry condition types.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}</span>
+<span class="sd">        A :class:`Mesh` class defining the mesh and associated information matrices.</span>
+<span class="sd">    boundary_node_types : array_like of str {&#39;dirichlet`, &#39;neumann&#39;, &#39;robin&#39;}</span>
+<span class="sd">        Boundary condition type for each coordinate in `boundary_node_coords`.</span>
+<span class="sd">    boundary_edge_types : array_like of str {&#39;dirichlet`, &#39;neumann&#39;, &#39;robin&#39;}</span>
+<span class="sd">        Boundary condition type for each edge segment in `boundary_edge_coords`.</span>
+<span class="sd">    boundary_node_coords : array_like, optional</span>
+<span class="sd">        List of coordinate values of the boundary nodes. If not specified, will use the boundary node coordinates stored</span>
+<span class="sd">        in `mesh`.</span>
+<span class="sd">    boundary_edge_coords : array_like, optional</span>
+<span class="sd">        List of grid coordinates for edge nodes. If not specified, will use the boundary edge coordinates stored in</span>
+<span class="sd">        `mesh`.</span>
+<span class="sd">    trial_basis, test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}, optional</span>
+<span class="sd">        A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases. If Neumann</span>
+<span class="sd">        boundary conditions included `test_basis` is required. If Robin boundary conditions included, then both bases</span>
+<span class="sd">        are required.</span>
+<span class="sd">    dirichlet_fun : function, optional</span>
+<span class="sd">        The Dirichlet boundary condition function `g`(`x`, `y`). Must be defined at the boundary values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    neumann_fun : function, optional</span>
+<span class="sd">        The Neumann boundary condition function `r`(`x`, `y`). Must be defined at the bounadry values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    robin_fun_q : function, optional</span>
+<span class="sd">        The Robin boundary condition function `q`(`x`, `y`). Must be defined at the boundary values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    robin_fun_p : function, optional</span>
+<span class="sd">        The Robin boundary condition function `p`(`x`, `y`). Must be defined at the boundary values specified in</span>
+<span class="sd">        `boundary_coords`.</span>
+<span class="sd">    coeff_fun : function, optional</span>
+<span class="sd">        Function name of the coefficient function `c`(`x`, `y`) in the Poisson equation. Required if Neumann or Robin</span>
+<span class="sd">        boundary conditions are included.</span>
+
+
+<span class="sd">    .. warning:: All edge boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the</span>
+<span class="sd">       solution.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - The Dirichlet boundary conditions are be defined as</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">        u(x, y) = g(x, y); (x, y) \in \delta\Omega \setminus (\Gamma_1 \cup \Gamma_2).</span>
+
+<span class="sd">    - The Neumann boundary conditions are defined as</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">        \nabla u(x, y) \cdot \hat{\mathbf{n}} = r(x, y); (x, y) \in \Gamma_1 \subseteq \delta\Omega,</span>
+
+<span class="sd">    - The Robin boundary conditions are defined as</span>
+
+<span class="sd">      .. math::</span>
+
+<span class="sd">        \nabla u(x, y) \cdot \hat{\mathbf{n}} + q(x, y) u(x, y) = p(x, y); (x, y) \in \Gamma_2 \subseteq \delta\Omega.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">boundary_node_types</span><span class="p">,</span> <span class="n">boundary_edge_types</span><span class="p">,</span>
+                 <span class="n">boundary_node_coords</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">boundary_edge_coords</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">trial_basis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test_basis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dirichlet_fun</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">neumann_fun</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">robin_fun_q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">robin_fun_p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coeff_fun</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">boundary_node_types</span><span class="p">,</span> <span class="n">boundary_node_coords</span><span class="p">,</span>
+                         <span class="n">dirichlet_fun</span><span class="p">,</span> <span class="n">neumann_fun</span><span class="p">,</span> <span class="n">robin_fun_q</span><span class="p">,</span> <span class="n">robin_fun_p</span><span class="p">,</span> <span class="n">coeff_fun</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">boundary_edge_coords</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">boundary_edge_coords</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_coords</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundary_edges</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span> <span class="o">=</span> <span class="n">boundary_edge_types</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trial_basis</span> <span class="o">=</span> <span class="n">trial_basis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_test_basis</span> <span class="o">=</span> <span class="n">test_basis</span>
+
+        <span class="c1"># Get the number of basis functions.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_basis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_num_local_trial</span> <span class="o">=</span> <span class="n">basis_type_parser</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trial_basis</span><span class="o">.</span><span class="n">basis_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_basis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_num_local_test</span> <span class="o">=</span> <span class="n">basis_type_parser</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_test_basis</span><span class="o">.</span><span class="n">basis_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Generate the boundary edge informaiton matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generate_boundary_edges</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_generate_boundary_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates the boundary node information matrix.&quot;&quot;&quot;</span>
+
+        <span class="c1"># Initialize the information matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int64&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Iterate through the input boundary types, standardize the type code and store the code in the matrix</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">):</span>
+                <span class="n">b_type</span> <span class="o">=</span> <span class="n">_BOUNDARY_ALIAS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">bstr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_types</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="n">b_type</span> <span class="o">=</span> <span class="n">_BOUNDARY_ALIAS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bstr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Boundary Type must be a string identifier or an integer code.&#39;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">b_type</span>
+
+        <span class="n">dtype_nodes</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;names&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;f</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span>
+                       <span class="s1">&#39;formats&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="o">.</span><span class="n">dtype</span><span class="p">]}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Pb</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype_nodes</span><span class="p">),</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_node_coords</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype_nodes</span><span class="p">)[</span><span class="n">i</span><span class="p">,:],</span>
+                                                    <span class="n">return_indices</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_generate_boundary_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates the boundary edge information matrix.&quot;&quot;&quot;</span>
+
+        <span class="c1"># Initialize the information matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int64&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Iterate through the input boundary types, standardize the type code and store the code in the matrix</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">):</span>
+                <span class="n">b_type</span> <span class="o">=</span> <span class="n">_BOUNDARY_ALIAS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">bstr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_types</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="n">b_type</span> <span class="o">=</span> <span class="n">_BOUNDARY_ALIAS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bstr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Boundary Type must be a string identifier or an integer code.&#39;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">b_type</span>
+
+        <span class="c1"># Find the node index of the input edge coordinates using the P matrix</span>
+        <span class="n">dtype_edges</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;names&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;f</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">P</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])],</span>
+                       <span class="s1">&#39;formats&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">P</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">P</span><span class="o">.</span><span class="n">dtype</span><span class="p">]}</span>
+        <span class="n">node_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_coords</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">node_idx</span><span class="p">)):</span>
+            <span class="n">node_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype_edges</span><span class="p">),</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edge_coords</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype_edges</span><span class="p">),</span>
+                                  <span class="n">return_indices</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># node_idx = node_idx[np.newaxis].T</span>
+
+        <span class="c1"># Search in the T matrix for the column containing the node indices for each edge</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">node_idx</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># The edge nodes are adjacent node indices in our `node_idx` vector</span>
+            <span class="n">edge_nodes</span> <span class="o">=</span> <span class="n">node_idx</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="c1"># Check the membership of the entries of `edge nodes` in T.</span>
+            <span class="c1"># The column of T containing both entries will be the finite element index associated with the edge end</span>
+            <span class="c1"># points in `edge nodes`.</span>
+            <span class="n">element_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">edge_nodes</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Store the finite element index and edge end points into the matrix</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">element_idx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_nodes</span>
+
+<div class="viewcode-block" id="BoundaryConditions2D.treat_neumann"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions2D.treat_neumann">[docs]</a>    <span class="nd">@copy_docstring_from</span><span class="p">(</span><span class="n">BoundaryConditions</span><span class="o">.</span><span class="n">treat_neumann</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">treat_neumann</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+        <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+        <span class="c1"># Initialize the Neumann vector `v`</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span>  <span class="c1"># Neumann boundary conditions</span>
+                <span class="c1"># Get the element index associated with the kth edge</span>
+                <span class="n">element_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="p">])</span>
+
+                <span class="c1"># Extract the global node coordinates to evaluate our integral on</span>
+                <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">element_idx</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+                <span class="c1"># Extract the global node coordinates of the edge end points to evaluate our integral on</span>
+                <span class="n">edge_endpts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">P</span><span class="p">[:,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="n">k</span><span class="p">])]</span>
+
+                <span class="k">for</span> <span class="n">beta</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_local_test</span><span class="p">):</span>
+                    <span class="k">def</span> <span class="nf">integrand_v</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_neumann_fun</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="o">=</span><span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
+                                                                  <span class="n">derivative_order</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+
+                    <span class="c1"># Compute the line integral along the edge</span>
+                    <span class="n">int_value_v</span> <span class="o">=</span> <span class="n">line_integral</span><span class="p">(</span><span class="n">integrand_v</span><span class="p">,</span> <span class="n">edge_endpts</span><span class="p">)</span>
+
+                    <span class="c1"># Store our integral value in `v`</span>
+                    <span class="n">v</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">beta</span><span class="p">,</span> <span class="n">element_idx</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">int_value_v</span>
+
+        <span class="c1"># Apply the treatment to the load vector</span>
+        <span class="n">vector</span> <span class="o">+=</span> <span class="n">v</span>
+
+        <span class="k">return</span> <span class="n">vector</span></div>
+
+<div class="viewcode-block" id="BoundaryConditions2D.treat_robin"><a class="viewcode-back" href="../../user/boundary.html#FEMpy.Boundaries.BoundaryConditions2D.treat_robin">[docs]</a>    <span class="nd">@copy_docstring_from</span><span class="p">(</span><span class="n">BoundaryConditions</span><span class="o">.</span><span class="n">treat_robin</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">treat_robin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+        <span class="c1"># The number of boundary edges</span>
+        <span class="n">num_boundary_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Initialize the Robin vector `w` and matrix `r`</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">lil_matrix</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_boundary_edges</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">3</span><span class="p">:</span>  <span class="c1"># Robin boundary conditions</span>
+                <span class="c1"># Get the element index associated with the kth edge</span>
+                <span class="n">element_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="p">])</span>
+
+                <span class="c1"># Extract the global node coordinates to evaluate our integral on</span>
+                <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">element_idx</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+                <span class="c1"># Extract the global node coordinates of the edge end points to evaluate our integral on</span>
+                <span class="n">edge_endpts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">P</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_edges</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="n">k</span><span class="p">]]</span>
+
+                <span class="k">for</span> <span class="n">beta</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_local_test</span><span class="p">):</span>
+                    <span class="k">def</span> <span class="nf">integrand_w</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_robin_fun_p</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="o">=</span><span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
+                                                                  <span class="n">derivative_order</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+
+                    <span class="c1"># Compute the line integral along the edge</span>
+                    <span class="n">int_value_w</span> <span class="o">=</span> <span class="n">line_integral</span><span class="p">(</span><span class="n">integrand_w</span><span class="p">,</span> <span class="n">edge_endpts</span><span class="p">)</span>
+
+                    <span class="c1"># Store our integral value in `w`</span>
+                    <span class="n">w</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">beta</span><span class="p">,</span> <span class="n">element_idx</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">int_value_w</span>
+
+                    <span class="k">for</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_local_trial</span><span class="p">):</span>
+                        <span class="k">def</span> <span class="nf">integrand_r</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+                            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coeff_fun</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_robin_fun_q</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="o">=</span><span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
+                                                                      <span class="n">derivative_order</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+                                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trial_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="o">=</span><span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span>
+                                                                       <span class="n">derivative_order</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+
+                        <span class="c1"># Compute the line integral along the edge</span>
+                        <span class="n">int_value_r</span> <span class="o">=</span> <span class="n">line_integral</span><span class="p">(</span><span class="n">integrand_r</span><span class="p">,</span> <span class="n">edge_endpts</span><span class="p">)</span>
+
+                        <span class="c1"># Store our integral value in `r`</span>
+                        <span class="n">r</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">beta</span><span class="p">,</span> <span class="n">element_idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">element_idx</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">int_value_r</span>
+
+        <span class="c1"># Apply the treatment to the matrix and vector</span>
+        <span class="n">matrix</span> <span class="o">+=</span> <span class="n">r</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+        <span class="n">vector</span> <span class="o">+=</span> <span class="n">w</span>
+
+        <span class="k">return</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">vector</span></div></div>
+
+
+<span class="n">BoundaryInfo</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;BoundaryInfo&#39;</span><span class="p">,</span> <span class="s1">&#39;aka&#39;</span><span class="p">)</span>
+<span class="n">_BOUNDARY_TYPE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="n">BoundaryInfo</span><span class="p">(</span><span class="n">aka</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;dirichlet&#39;</span><span class="p">,</span> <span class="s1">&#39;dir&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span> <span class="s1">&#39;g&#39;</span><span class="p">]),</span>
+    <span class="o">-</span><span class="mi">2</span><span class="p">:</span> <span class="n">BoundaryInfo</span><span class="p">(</span><span class="n">aka</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;neumann&#39;</span><span class="p">,</span> <span class="s1">&#39;neu&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">]),</span>
+    <span class="o">-</span><span class="mi">3</span><span class="p">:</span> <span class="n">BoundaryInfo</span><span class="p">(</span><span class="n">aka</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;robin&#39;</span><span class="p">,</span> <span class="s1">&#39;rob&#39;</span><span class="p">,</span> <span class="s1">&#39;pq&#39;</span><span class="p">,</span> <span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="s1">&#39;q&#39;</span><span class="p">])</span>
+<span class="p">}</span>
+
+<span class="n">_BOUNDARY_ALIAS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">alias</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">_BOUNDARY_TYPE</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                       <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">info</span><span class="o">.</span><span class="n">aka</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Benjamin Floyd.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

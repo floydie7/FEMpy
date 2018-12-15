@@ -1,0 +1,557 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Finite Element Solvers &mdash; FEMpy 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="FEMpy 1.0 documentation" href="../index.html"/>
+        <link rel="next" title="Assemblers" href="assemblers.html"/>
+        <link rel="prev" title="Boundary Conditions" href="boundary.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> FEMpy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mesh.html">Mesh Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basis.html">Finite Element Bases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="boundary.html">Boundary Conditions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Finite Element Solvers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#d-poisson-equation">1D Poisson Equation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">2D Poisson Equation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="assemblers.html">Assemblers</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/triangular2d.html">2D Poisson Equation with Triangular Elements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/errors.html">Error calculations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">FEMpy</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Finite Element Solvers</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/user/solvers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="finite-element-solvers">
+<span id="solvers"></span><h1>Finite Element Solvers<a class="headerlink" href="#finite-element-solvers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="d-poisson-equation">
+<h2>1D Poisson Equation<a class="headerlink" href="#d-poisson-equation" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="FEMpy.Solvers.Poisson1D">
+<em class="property">class </em><code class="descclassname">FEMpy.Solvers.</code><code class="descname">Poisson1D</code><span class="sig-paren">(</span><em>mesh</em>, <em>fe_trial_basis</em>, <em>fe_test_basis</em>, <em>boundary_conditions</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson1D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson1D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solves a one-dimensional Poisson equation.</p>
+<p>Uses finite element methods to solve a Poisson differential equation of the form</p>
+<div class="math notranslate nohighlight">
+\[- \frac{{\rm d}}{{\rm d} x}\left(c(x) \frac{{\rm d}}{{\rm d} x} u(x) \right) = f(x); a \leq x \leq b.\]</div>
+<p>with a combination of Dirichlet, Neumann, or Robin boundary conditions.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Both end point boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the
+solution.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mesh</strong> (<a class="reference internal" href="mesh.html#FEMpy.Mesh.Interval1D" title="FEMpy.Mesh.Interval1D"><code class="xref py py-class docutils literal notranslate"><span class="pre">FEMpy.Mesh.Interval1D</span></code></a>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">Mesh</span></code> class defining the mesh and associated information matrices.</li>
+<li><strong>fe_trial_basis, fe_test_basis</strong> (<a class="reference internal" href="basis.html#FEMpy.FEBasis.IntervalBasis1D" title="FEMpy.FEBasis.IntervalBasis1D"><code class="xref py py-class docutils literal notranslate"><span class="pre">FEMpy.FEBasis.IntervalBasis1D</span></code></a>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">FEBasis</span></code> class defining the finite element basis functions for the trial and test bases.</li>
+<li><strong>boundary_conditions</strong> (<a class="reference internal" href="boundary.html#FEMpy.Boundaries.BoundaryConditions" title="FEMpy.Boundaries.BoundaryConditions"><code class="xref py py-class docutils literal notranslate"><span class="pre">FEMpy.Boundaries.BoundaryConditions</span></code></a>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">BoundaryConditions</span></code> class defining the boundary conditions on the domain.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">FEMpy</span> <span class="k">import</span> <span class="n">Interval1D</span><span class="p">,</span> <span class="n">IntervalBasis1D</span><span class="p">,</span> <span class="n">BoundaryConditions</span><span class="p">,</span> <span class="n">Poisson1D</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">Interval1D</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">basis_type</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="n">IntervalBasis1D</span><span class="p">(</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dirichlet_funct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bcs</span> <span class="o">=</span> <span class="n">BoundaryConditions</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;dirichlet&#39;</span><span class="p">,</span> <span class="s1">&#39;dirichlet&#39;</span><span class="p">),</span> <span class="n">dirichlet_fun</span><span class="o">=</span><span class="n">dirichlet_funct</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coefficient_funct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_funct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">poisson_eq</span> <span class="o">=</span> <span class="n">Poisson1D</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">bcs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">poisson_eq</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">coefficient_funct</span><span class="p">,</span> <span class="n">source_funct</span><span class="p">)</span>
+<span class="go">array([0.        , 0.44814801, 0.54030231])</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson1D.fe_solution">
+<code class="descname">fe_solution</code><span class="sig-paren">(</span><em>x</em>, <em>local_sol</em>, <em>vertices</em>, <em>derivative_order</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson1D.fe_solution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson1D.fe_solution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the functional solution piecewise on the finite on the finite elements.</p>
+<p>Uses the solution vector and the basis function to define a piecewise continuous solution over the element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>float or array_like</em>) – A value or array of points to evaluate the function on.</li>
+<li><strong>local_sol</strong> (<em>array_like</em>) – Finite element solution node vector local to the element <cite>En</cite>.</li>
+<li><strong>vertices</strong> (<em>array_like</em>) – Global node coordinates for the mesh element <cite>En</cite>.</li>
+<li><strong>derivative_order</strong> (<em>int</em>) – The derivative order to take the basis function to.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Solution at all points in <cite>x</cite> in element.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson1D.h1_seminorm_error">
+<code class="descname">h1_seminorm_error</code><span class="sig-paren">(</span><em>diff_exact_sol</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson1D.h1_seminorm_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson1D.h1_seminorm_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>The H1 semi-norm error of the finite element solution compared against the given analyatical solution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>diff_exact_sol</strong> (<em>function</em>) – The first derivative of the analytical solution to the Poisson equation.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The H1 semi-norm error of the finite element solution over the domain evaluated element-wise.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson1D.l2_error">
+<code class="descname">l2_error</code><span class="sig-paren">(</span><em>exact_sol</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson1D.l2_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson1D.l2_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>The L2 norm error of the finite element solution compared against the given analytical solution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>exact_sol</strong> (<em>function</em>) – The analytical solution to the Poisson equation.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The L2 norm error of the finite element solution over the domain evaluated element-wise.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson1D.l_inf_error">
+<code class="descname">l_inf_error</code><span class="sig-paren">(</span><em>exact_sol</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson1D.l_inf_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson1D.l_inf_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the L-infinity norm error.</p>
+<p>Computes the L-infinity norm error using the exact solution and the finite element function <cite>fe_solution</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>exact_sol</strong> (<em>function</em>) – The analytical solution to compare the finite element solution against.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The L-infinity norm error of the finite element solution over the domain evaluated element-wise.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson1D.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><em>coeff_fun</em>, <em>source_fun</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson1D.solve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson1D.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that performs the finte element solution algorithm.</p>
+<p>Calls the assembly functions <cite>FEMpy.Assemblers.assemble_matrix</cite> and <cite>FEMpy.Assemblers.assemble_vector</cite> to create
+the stiffness matrix and load vector respectively. Then, applies the boundary condition treatments to the matrix
+and vector. Finally, solves the linear system <span class="math notranslate nohighlight">\(A\mathbf{x} = \mathbf{b}.\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coeff_fun</strong> (<em>function</em>) – Function name of the coefficient function <cite>c`(`x</cite>) in the Poisson equation.</li>
+<li><strong>source_fun</strong> (<em>function</em>) – The nonhomogeneous source function <cite>f`(`x</cite>) of the Poisson equation.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The nodal solution vector.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id1">
+<h2>2D Poisson Equation<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="FEMpy.Solvers.Poisson2D">
+<em class="property">class </em><code class="descclassname">FEMpy.Solvers.</code><code class="descname">Poisson2D</code><span class="sig-paren">(</span><em>mesh</em>, <em>fe_trial_basis</em>, <em>fe_test_basis</em>, <em>boundary_conditions</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solves a two-dimensional Poisson equation.</p>
+<p>Uses finite element methods to solve a Poisson differential equation of the form</p>
+<div class="math notranslate nohighlight">
+\[-\nabla\left(c(\mathbf{x}) \cdot \nabla u(\mathbf{x}) \right) = f(\mathbf{x}); \mathbf{x} \in \Omega\]</div>
+<p>with a combination of Dirichlet, Neumann, or Robin boundary conditions.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">All edge boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the
+solution.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mesh</strong> (<a class="reference internal" href="mesh.html#FEMpy.Mesh.TriangularMesh2D" title="FEMpy.Mesh.TriangularMesh2D"><code class="xref py py-class docutils literal notranslate"><span class="pre">FEMpy.Mesh.TriangularMesh2D</span></code></a>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">Mesh</span></code> class defining the mesh and associated information matrices.</li>
+<li><strong>fe_trial_basis, fe_test_basis</strong> (<a class="reference internal" href="basis.html#FEMpy.FEBasis.IntervalBasis1D" title="FEMpy.FEBasis.IntervalBasis1D"><code class="xref py py-class docutils literal notranslate"><span class="pre">FEMpy.FEBasis.IntervalBasis1D</span></code></a>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">FEBasis</span></code> class defining the finite element basis functions for the trial and test bases.</li>
+<li><strong>boundary_conditions</strong> (<a class="reference internal" href="boundary.html#FEMpy.Boundaries.BoundaryConditions2D" title="FEMpy.Boundaries.BoundaryConditions2D"><code class="xref py py-class docutils literal notranslate"><span class="pre">FEMpy.Boundaries.BoundaryConditions2D</span></code></a>) – A :class: <cite>BoundaryConditions</cite> class defining the boundary conditions on the domain.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">FEMpy</span> <span class="k">import</span> <span class="n">TriangularMesh2D</span><span class="p">,</span> <span class="n">TriangularBasis2D</span><span class="p">,</span> <span class="n">BoundaryConditions2D</span><span class="p">,</span> <span class="n">Poisson2D</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">top</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">h</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">dirichlet_funct</span><span class="p">(</span><span class="n">coord</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">coord</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">elif</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">elif</span> <span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">elif</span> <span class="n">y</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coeff_funct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">source_funct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">TriangularMesh2D</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">top</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">basis</span> <span class="o">=</span> <span class="n">TriangularBasis2D</span><span class="p">(</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">boundary_node_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;dirichlet&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundary_nodes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">boundary_edge_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;dirichlet&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">boundary_edges</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bcs</span> <span class="o">=</span> <span class="n">BoundaryConditions2D</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">boundary_node_types</span><span class="p">,</span> <span class="n">boundary_edge_types</span><span class="p">,</span> <span class="n">dirichlet_fun</span><span class="o">=</span><span class="n">dirichlet_funct</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">poisson_eq</span> <span class="o">=</span> <span class="n">Poisson2D</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">bcs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">poisson_eq</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">coeff_funct</span><span class="p">,</span> <span class="n">source_funct</span><span class="p">)</span>
+<span class="go">array([0.13533528, 0.36787944, 1., 0.36787944, 1.,  2.71828183, 1., 2.71828183, 7.3890561])</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson2D.fe_solution">
+<code class="descname">fe_solution</code><span class="sig-paren">(</span><em>coords</em>, <em>local_sol</em>, <em>vertices</em>, <em>derivative_order</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson2D.fe_solution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson2D.fe_solution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the functional solution piecewise on the finite on the finite elements.</p>
+<p>Uses the solution vector and the basis function to define a piecewise continuous solution over the element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coords</strong> (<em>float or array_like</em>) – A value or array of points to evaluate the function on.</li>
+<li><strong>local_sol</strong> (<em>array_like</em>) – Finite element solution node vector local to the element <cite>En</cite>.</li>
+<li><strong>vertices</strong> (<em>array_like</em>) – Global node coordinates for the mesh element <cite>En</cite>.</li>
+<li><strong>derivative_order</strong> (<em>tuple of int</em>) – The derivative orders in the x- and y-directions to take the basis function to.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Solution at all points in <cite>coords</cite> in element.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson2D.h1_seminorm_error">
+<code class="descname">h1_seminorm_error</code><span class="sig-paren">(</span><em>diff_exact_sol</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson2D.h1_seminorm_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson2D.h1_seminorm_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>The H1 semi-norm error of the finite element solution compared against the given analyatical solution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>diff_exact_sol</strong> (<em>tuple of function</em>) – A tuple of first derivatives in the x- and the y- directions the analytical solution to the Poisson equation
+respectively.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The full H1 semi-norm error of the finite element solution over the domain evaluated element-wise.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson2D.l2_error">
+<code class="descname">l2_error</code><span class="sig-paren">(</span><em>exact_sol</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson2D.l2_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson2D.l2_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>The L2 norm error of the finite element solution compared against the given analytical solution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>exact_sol</strong> (<em>function</em>) – The analytical solution to the Poisson equation.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The L2 norm error of the finite element solution over the domain evaluated element-wise.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson2D.l_inf_error">
+<code class="descname">l_inf_error</code><span class="sig-paren">(</span><em>exact_sol</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson2D.l_inf_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson2D.l_inf_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the L-infinity norm error.</p>
+<p>Computes the L-infinity norm error using the exact solution and the finite element function <cite>fe_solution</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>exact_sol</strong> (<em>function</em>) – The analytical solution to compare the finite element solution against.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The L-infinity norm error of the finite element solution over the domain evaluated element-wise.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Solvers.Poisson2D.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><em>coeff_fun</em>, <em>source_fun</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Solvers.html#Poisson2D.solve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Solvers.Poisson2D.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that performs the finte element solution algorithm.</p>
+<p>Calls the assembly functions <cite>FEMpy.Assemblers.assemble_matrix</cite> and <cite>FEMpy.Assemblers.assemble_vector</cite> to create
+the stiffness matrix and load vector respectively. Then, applies the boundary condition treatments to the matrix
+and vector. Finally, solves the linear system <span class="math notranslate nohighlight">\(A\mathbf{x} = \mathbf{b}.\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>coeff_fun</strong> (<em>function</em>) – Function name of the coefficient function <cite>c`(`x</cite>, <cite>y</cite>) in the Poisson equation.</li>
+<li><strong>source_fun</strong> (<em>function</em>) – The nonhomogeneous source function <cite>f`(`x</cite>, <cite>y</cite>) of the Poisson equation.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="assemblers.html" class="btn btn-neutral float-right" title="Assemblers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="boundary.html" class="btn btn-neutral" title="Boundary Conditions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Benjamin Floyd.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

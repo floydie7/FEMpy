@@ -15,10 +15,11 @@ from .helpers import dbquad_triangle, copy_docstring_from
 
 
 class Poisson1D(object):
-    """
+    r"""
     Solves a one-dimensional Poisson equation.
 
     Uses finite element methods to solve a Poisson differential equation of the form
+
     .. math::
         - \frac{{\rm d}}{{\rm d} x}\left(c(x) \frac{{\rm d}}{{\rm d} x} u(x) \right) = f(x); a \leq x \leq b.
 
@@ -29,12 +30,12 @@ class Poisson1D(object):
 
     Parameters
     ----------
-    mesh : :class: FEMpy.Mesh.Interval1D
+    mesh : :class:`FEMpy.Mesh.Interval1D`
         A :class:`Mesh` class defining the mesh and associated information matrices.
-    fe_trial_basis, fe_test_basis : :class: FEMpy.FEBasis.IntervalBasis1D
-        A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases.
-    boundary_conditions : :class: `FEMpy.Boundaries.BoundaryConditions`
-        A :class: `BoundaryConditions` class defining the boundary conditions on the domain.
+    fe_trial_basis, fe_test_basis : :class:`FEMpy.FEBasis.IntervalBasis1D`
+        A :class:`FEBasis` class defining the finite element basis functions for the trial and test bases.
+    boundary_conditions : :class:`FEMpy.Boundaries.BoundaryConditions`
+        A :class:`BoundaryConditions` class defining the boundary conditions on the domain.
 
     Examples
     --------
@@ -48,8 +49,8 @@ class Poisson1D(object):
     >>> coefficient_funct = lambda x: np.exp(x)
     >>> source_funct = lambda x: -np.exp(x) * (np.cos(x) - 2*np.sin(x) - x*np.cos(x) - x*np.sin(x))
     >>> poisson_eq = Poisson1D(mesh, basis, basis, bcs)
-    >>> print(poisson_eq.solve(coefficient_funct, source_funct))
-    >>> array([0.        , 0.44814801, 0.54030231])
+    >>> poisson_eq.solve(coefficient_funct, source_funct)
+    array([0.        , 0.44814801, 0.54030231])
 
     """
 
@@ -68,7 +69,7 @@ class Poisson1D(object):
 
         Calls the assembly functions `FEMpy.Assemblers.assemble_matrix` and `FEMpy.Assemblers.assemble_vector` to create
         the stiffness matrix and load vector respectively. Then, applies the boundary condition treatments to the matrix
-        and vector. Finally, solves the linear system :math: A\mathbf{x} = \mathbf{b}.
+        and vector. Finally, solves the linear system :math:`A\mathbf{x} = \mathbf{b}.`
 
         Parameters
         ----------
@@ -144,7 +145,7 @@ class Poisson1D(object):
 
         fun_value = np.sum([local_sol[k] * self._fe_test.fe_local_basis(x, vertices, basis_idx=k,
                                                                          derivative_order=derivative_order)
-                            for k in range(num_local_basis)])
+                            for k in range(num_local_basis)], axis=0)
 
         return fun_value
 
@@ -178,7 +179,7 @@ class Poisson1D(object):
             local_sol = self._nodal_solution[self._mesh.Tb[:, n]]
 
             # Generate grid of points local to the element
-            node_points = roots_legendre(5)[0]
+            node_points = roots_legendre(4)[0]
             element_points = (vertices[1] - vertices[0]) / 2 * node_points + (vertices[0] + vertices[1]) / 2
 
             # Compute the error on each evaluation node point in the element
@@ -274,10 +275,11 @@ class Poisson1D(object):
 
 
 class Poisson2D(Poisson1D):
-    """
+    r"""
     Solves a two-dimensional Poisson equation.
 
     Uses finite element methods to solve a Poisson differential equation of the form
+
     .. math::
         -\nabla\left(c(\mathbf{x}) \cdot \nabla u(\mathbf{x}) \right) = f(\mathbf{x}); \mathbf{x} \in \Omega
 
@@ -288,15 +290,16 @@ class Poisson2D(Poisson1D):
 
     Parameters
     ----------
-    mesh : :class: FEMpy.Mesh.TriangularMesh2D
+    mesh : :class:`FEMpy.Mesh.TriangularMesh2D`
         A :class:`Mesh` class defining the mesh and associated information matrices.
-    fe_trial_basis, fe_test_basis : :class: FEMpy.FEBasis.IntervalBasis1D
-        A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases.
-    boundary_conditions : :class: `FEMpy.Boundaries.BoundaryConditions2D`
+    fe_trial_basis, fe_test_basis : :class:`FEMpy.FEBasis.IntervalBasis1D`
+        A :class:`FEBasis` class defining the finite element basis functions for the trial and test bases.
+    boundary_conditions : :class:`FEMpy.Boundaries.BoundaryConditions2D`
         A :class: `BoundaryConditions` class defining the boundary conditions on the domain.
 
     Examples
     --------
+
     >>> import numpy as np
     >>> from FEMpy import TriangularMesh2D, TriangularBasis2D, BoundaryConditions2D, Poisson2D
     >>> left, right, bottom, top = -1, 1, -1, 1
@@ -320,7 +323,8 @@ class Poisson2D(Poisson1D):
     >>> bcs = BoundaryConditions2D(mesh, boundary_node_types, boundary_edge_types, dirichlet_fun=dirichlet_funct)
     >>> poisson_eq = Poisson2D(mesh, basis, basis, bcs)
     >>> poisson_eq.solve(coeff_funct, source_funct)
-    >>> array([0.13533528, 0.36787944, 1., 0.36787944, 1.,  2.71828183, 1., 2.71828183, 7.3890561])
+    array([0.13533528, 0.36787944, 1., 0.36787944, 1.,  2.71828183, 1., 2.71828183, 7.3890561])
+
     """
 
     def __init__(self, mesh, fe_trial_basis, fe_test_basis, boundary_conditions):
@@ -332,7 +336,7 @@ class Poisson2D(Poisson1D):
 
         Calls the assembly functions `FEMpy.Assemblers.assemble_matrix` and `FEMpy.Assemblers.assemble_vector` to create
         the stiffness matrix and load vector respectively. Then, applies the boundary condition treatments to the matrix
-        and vector. Finally, solves the linear system :math: A\mathbf{x} = \mathbf{b}.
+        and vector. Finally, solves the linear system :math:`A\mathbf{x} = \mathbf{b}.`
 
         Parameters
         ----------
@@ -418,16 +422,36 @@ class Poisson2D(Poisson1D):
         num_elements = self._mesh.num_elements_x
 
         # Initialize the element maximum error vector
-        element_max = np.empty((1, num_elements))
+        element_max = np.empty(num_elements)
         for n in range(num_elements):
             # Extract the global node coordinates for the element E_n
-            vertices = self._mesh.get_vertices(n)
+            vertices = self._mesh.get_vertices(n).T
 
             # Select for the solution at the local finite element nodes
             local_sol = self._nodal_solution[self._mesh.Tb[:, n]]
 
             # Generate grid of points local to the element
-            element_points = np.linspace(vertices[0], vertices[1])  # Todo: these need to be local nodes
+            # grid_points = sample_points_in_triangle(50)
+            grid_points = np.array([[(1+0)/2, (1-0)*(1+0)/4],
+                                    [(1+np.sqrt(3/5))/2, (1-np.sqrt(3/5))*(1+np.sqrt(3/5))/4],
+                                    [(1+np.sqrt(3/5))/2, (1-np.sqrt(3/5))*(1-np.sqrt(3/5))/4],
+                                    [(1-np.sqrt(3/5))/2, (1+np.sqrt(3/5))*(1+np.sqrt(3/5))/4],
+                                    [(1-np.sqrt(3/5))/2, (1+np.sqrt(3/5))*(1-np.sqrt(3/5))/4],
+                                    [(1+0)/2, (1-0)*(1+np.sqrt(3/5))/4],
+                                    [(1+0)/2, (1-0)*(1-np.sqrt(3/5))/4],
+                                    [(1+np.sqrt(3/5))/2, (1-np.sqrt(3/5))*(1+0)/4],
+                                    [(1-np.sqrt(3/5))/2, (1+np.sqrt(3/5))*(1+0)/4]]).T
+
+            # Transform the sampled grid point into our triangle
+            x1, y1 = vertices[0]
+            x2, y2 = vertices[1]
+            x3, y3 = vertices[2]
+
+            # The affine transformation from the standard triangle to our element triangle is
+            new_x = (-x1 + x2) * grid_points[0] + (-x1 + x3) * grid_points[1] + x1
+            new_y = (-y1 + y2) * grid_points[0] + (-y1 + y3) * grid_points[1] + y1
+
+            element_points = np.vstack([new_x, new_y])
 
             # Compute the error on each evaluation node point in the element
             element_error = np.abs(exact_sol(element_points) - self.fe_solution(element_points, local_sol, vertices,
@@ -468,10 +492,10 @@ class Poisson2D(Poisson1D):
         num_elements = self._mesh.num_elements_x
 
         # Initialize the elment error vector
-        element_error = np.empty((1, num_elements))
+        element_error = np.empty(num_elements)
         for n in range(num_elements):
             # Extract the global node coordinates for the element E_n
-            vertices = self._mesh.get_vertices(n)
+            vertices = self._mesh.get_vertices(n).T
 
             # Select for the solution at the local finite element nodes
             local_sol = self._nodal_solution[self._mesh.Tb[:, n]]

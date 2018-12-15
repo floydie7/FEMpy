@@ -1,0 +1,16 @@
+.. _mesh:
+
+Mesh Generation
+===============
+
+1D interval domain meshes
+-------------------------
+
+.. autoclass:: FEMpy.Mesh.Interval1D
+    :members:
+
+2D rectangular meshes with triangular elements
+----------------------------------------------
+
+.. autoclass:: FEMpy.Mesh.TriangularMesh2D
+    :members:

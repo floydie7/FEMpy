@@ -12,9 +12,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
 
 
 # -- Project information -----------------------------------------------------
@@ -47,6 +47,8 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    "sphinx.ext.napoleon",
+    'nbsphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -169,3 +171,26 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+# Readthedocs.
+on_rtd = os.environ.get("READTHEDOCS", None) == "True"
+if not on_rtd:
+    import sphinx_rtd_theme
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+html_theme = "sphinx_rtd_theme"
+
+napoleon_use_param = False
+
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+
+.. only:: html
+
+   **Note:** This tutorial was generated from an IPython notebook that can be 
+   downloaded `here <../{{ docname }}>`_.
+
+.. only:: latex
+
+    The following section was created from :file:`{{ docname }}`.
+"""

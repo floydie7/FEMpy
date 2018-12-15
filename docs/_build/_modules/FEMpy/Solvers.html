@@ -1,0 +1,744 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>FEMpy.Solvers &mdash; FEMpy 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="FEMpy 1.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> FEMpy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../user/install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/mesh.html">Mesh Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/basis.html">Finite Element Bases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/boundary.html">Boundary Conditions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/solvers.html">Finite Element Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/assemblers.html">Assemblers</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/triangular2d.html">2D Poisson Equation with Triangular Elements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/errors.html">Error calculations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">FEMpy</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>FEMpy.Solvers</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for FEMpy.Solvers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Solvers.py</span>
+<span class="sd">Author: Benjamin Floyd</span>
+
+<span class="sd">Contains the Finite Element Method Solvers.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="k">import</span> <span class="n">quad</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">linalg</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">roots_legendre</span>
+
+<span class="kn">from</span> <span class="nn">.Assemblers</span> <span class="k">import</span> <span class="n">assemble_matrix</span><span class="p">,</span> <span class="n">assemble_vector</span>
+<span class="kn">from</span> <span class="nn">.helpers</span> <span class="k">import</span> <span class="n">dbquad_triangle</span><span class="p">,</span> <span class="n">copy_docstring_from</span><span class="p">,</span> <span class="n">sample_points_in_triangle</span>
+
+
+<div class="viewcode-block" id="Poisson1D"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson1D">[docs]</a><span class="k">class</span> <span class="nc">Poisson1D</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves a one-dimensional Poisson equation.</span>
+
+<span class="sd">    Uses finite element methods to solve a Poisson differential equation of the form</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        - \frac{{\rm d}}{{\rm d} x}\left(c(x) \frac{{\rm d}}{{\rm d} x} u(x) \right) = f(x); a \leq x \leq b.</span>
+
+<span class="sd">    with a combination of Dirichlet, Neumann, or Robin boundary conditions.</span>
+
+<span class="sd">    .. warning:: Both end point boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the</span>
+<span class="sd">        solution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : :class:`FEMpy.Mesh.Interval1D`</span>
+<span class="sd">        A :class:`Mesh` class defining the mesh and associated information matrices.</span>
+<span class="sd">    fe_trial_basis, fe_test_basis : :class:`FEMpy.FEBasis.IntervalBasis1D`</span>
+<span class="sd">        A :class:`FEBasis` class defining the finite element basis functions for the trial and test bases.</span>
+<span class="sd">    boundary_conditions : :class:`FEMpy.Boundaries.BoundaryConditions`</span>
+<span class="sd">        A :class:`BoundaryConditions` class defining the boundary conditions on the domain.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from FEMpy import Interval1D, IntervalBasis1D, BoundaryConditions, Poisson1D</span>
+<span class="sd">    &gt;&gt;&gt; mesh = Interval1D(0, 1, h=1/2, basis_type=&#39;linear&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; basis = IntervalBasis1D(&#39;linear&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; dirichlet_funct = lambda x: 0 if x == 0 else np.cos(1)</span>
+<span class="sd">    &gt;&gt;&gt; bcs = BoundaryConditions(mesh, (&#39;dirichlet&#39;, &#39;dirichlet&#39;), dirichlet_fun=dirichlet_funct)</span>
+<span class="sd">    &gt;&gt;&gt; coefficient_funct = lambda x: np.exp(x)</span>
+<span class="sd">    &gt;&gt;&gt; source_funct = lambda x: -np.exp(x) * (np.cos(x) - 2*np.sin(x) - x*np.cos(x) - x*np.sin(x))</span>
+<span class="sd">    &gt;&gt;&gt; poisson_eq = Poisson1D(mesh, basis, basis, bcs)</span>
+<span class="sd">    &gt;&gt;&gt; poisson_eq.solve(coefficient_funct, source_funct)</span>
+<span class="sd">    array([0.        , 0.44814801, 0.54030231])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">fe_trial_basis</span><span class="p">,</span> <span class="n">fe_test_basis</span><span class="p">,</span> <span class="n">boundary_conditions</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fe_trial</span> <span class="o">=</span> <span class="n">fe_trial_basis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span> <span class="o">=</span> <span class="n">fe_test_basis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span> <span class="o">=</span> <span class="n">boundary_conditions</span>
+
+        <span class="c1"># This will be overwritten by the solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Poisson1D.solve"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson1D.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coeff_fun</span><span class="p">,</span> <span class="n">source_fun</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method that performs the finte element solution algorithm.</span>
+
+<span class="sd">        Calls the assembly functions `FEMpy.Assemblers.assemble_matrix` and `FEMpy.Assemblers.assemble_vector` to create</span>
+<span class="sd">        the stiffness matrix and load vector respectively. Then, applies the boundary condition treatments to the matrix</span>
+<span class="sd">        and vector. Finally, solves the linear system :math:`A\mathbf{x} = \mathbf{b}.`</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coeff_fun : function</span>
+<span class="sd">            Function name of the coefficient function `c`(`x`) in the Poisson equation.</span>
+<span class="sd">        source_fun : function</span>
+<span class="sd">            The nonhomogeneous source function `f`(`x`) of the Poisson equation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            The nodal solution vector.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create our stiffness matrix</span>
+        <span class="n">stiffness_matrix</span> <span class="o">=</span> <span class="n">assemble_matrix</span><span class="p">(</span><span class="n">coeff_fun</span><span class="p">,</span>
+                                           <span class="n">mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">,</span>
+                                           <span class="n">trial_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_trial</span><span class="p">,</span> <span class="n">test_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="p">,</span>
+                                           <span class="n">derivative_order_trial</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">derivative_order_test</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Create our load vector</span>
+        <span class="n">load_vector</span> <span class="o">=</span> <span class="n">assemble_vector</span><span class="p">(</span><span class="n">source_fun</span><span class="p">,</span>
+                                      <span class="n">mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">,</span>
+                                      <span class="n">test_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="p">,</span>
+                                      <span class="n">derivative_order_test</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Modify the stiffness matrix and the load vector to accommodate the boundary conditions specified.</span>
+        <span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span><span class="o">.</span><span class="n">treat_robin</span><span class="p">(</span><span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span><span class="p">)</span>
+        <span class="n">load_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span><span class="o">.</span><span class="n">treat_neumann</span><span class="p">(</span><span class="n">load_vector</span><span class="p">)</span>
+        <span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span><span class="o">.</span><span class="n">treat_dirichlet</span><span class="p">(</span><span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span><span class="p">)</span>
+
+        <span class="c1"># Convert the stiffness matrix to a compressed sparse row matrix as it will be more efficient for matrix-vector</span>
+        <span class="c1"># products</span>
+        <span class="n">stiffness_matrix</span> <span class="o">=</span> <span class="n">stiffness_matrix</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+
+        <span class="c1"># Solve the system for our result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">spsolve</span><span class="p">(</span><span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span></div>
+
+<div class="viewcode-block" id="Poisson1D.fe_solution"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson1D.fe_solution">[docs]</a>    <span class="k">def</span> <span class="nf">fe_solution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">local_sol</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Defines the functional solution piecewise on the finite on the finite elements.</span>
+
+<span class="sd">        Uses the solution vector and the basis function to define a piecewise continuous solution over the element.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x : float or array_like</span>
+<span class="sd">            A value or array of points to evaluate the function on.</span>
+<span class="sd">        local_sol : array_like</span>
+<span class="sd">            Finite element solution node vector local to the element `En`.</span>
+<span class="sd">        vertices : array_like</span>
+<span class="sd">            Global node coordinates for the mesh element `En`.</span>
+<span class="sd">        derivative_order : int</span>
+<span class="sd">            The derivative order to take the basis function to.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Solution at all points in `x` in element.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Set the basis type from the test basis</span>
+        <span class="n">basis_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="o">.</span><span class="n">basis_type</span>
+
+        <span class="k">if</span> <span class="n">basis_type</span> <span class="o">==</span> <span class="mi">101</span><span class="p">:</span>  <span class="c1"># linear basis</span>
+            <span class="n">num_local_basis</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="n">basis_type</span> <span class="o">==</span> <span class="mi">102</span><span class="p">:</span>  <span class="c1"># quadratic basis</span>
+            <span class="n">num_local_basis</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown basis type&#39;</span><span class="p">)</span>
+
+        <span class="n">fun_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">local_sol</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+                                                                         <span class="n">derivative_order</span><span class="o">=</span><span class="n">derivative_order</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_local_basis</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">fun_value</span></div>
+
+<div class="viewcode-block" id="Poisson1D.l_inf_error"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson1D.l_inf_error">[docs]</a>    <span class="k">def</span> <span class="nf">l_inf_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exact_sol</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the L-infinity norm error.</span>
+
+<span class="sd">        Computes the L-infinity norm error using the exact solution and the finite element function `fe_solution`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        exact_sol : function</span>
+<span class="sd">            The analytical solution to compare the finite element solution against.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The L-infinity norm error of the finite element solution over the domain evaluated element-wise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Get the number of elements from the mesh</span>
+        <span class="n">num_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">num_elements_x</span>
+
+        <span class="c1"># Initialize the element maximum error vector</span>
+        <span class="n">element_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">num_elements</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="c1"># Extract the global node coordinates for the element E_n</span>
+            <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+            <span class="c1"># Select for the solution at the local finite element nodes</span>
+            <span class="n">local_sol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[:,</span> <span class="n">n</span><span class="p">]]</span>
+
+            <span class="c1"># Generate grid of points local to the element</span>
+            <span class="n">node_points</span> <span class="o">=</span> <span class="n">roots_legendre</span><span class="p">(</span><span class="mi">4</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">element_points</span> <span class="o">=</span> <span class="p">(</span><span class="n">vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">node_points</span> <span class="o">+</span> <span class="p">(</span><span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+
+            <span class="c1"># Compute the error on each evaluation node point in the element</span>
+            <span class="n">element_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">exact_sol</span><span class="p">(</span><span class="n">element_points</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe_solution</span><span class="p">(</span><span class="n">element_points</span><span class="p">,</span> <span class="n">local_sol</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+            <span class="c1"># Find the maximum error in the element</span>
+            <span class="n">element_max</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">element_error</span><span class="p">)</span>
+
+        <span class="c1"># Return the maximum error over all elements</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">element_max</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__l2_hsemi_norm_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exact_sol</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes either the L2 norm error or the H1 semi-norm error.</span>
+
+<span class="sd">        Computes either the L2 norm error or the H1 semi-norm error dependent on the derivative order specified . If</span>
+<span class="sd">        ```derivative_order` == 1`` then the L2 norm error is computed, if ```derivative_order` == 1`` then the H1</span>
+<span class="sd">        semi-norm is computed.</span>
+
+<span class="sd">        .. note:: This is designed to be called via the `l2_error` and `h1_seminorm_error` methods which will provide</span>
+<span class="sd">        the appropriate `derivative_order`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        exact_sol : function</span>
+<span class="sd">            The analytical solution. If the H1 semi-norm error is desired, this must be the first derivative of the</span>
+<span class="sd">            analytical solution.</span>
+<span class="sd">        derivative_order : int</span>
+<span class="sd">            The derivative order to take the basis function to.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The L2 norm error or the H1 semi-norm error of the finite element solution over the domain evaluated</span>
+<span class="sd">            element-wise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Get the number of elements from the mesh</span>
+        <span class="n">num_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">num_elements_x</span>
+
+        <span class="c1"># Initialize the elment error vector</span>
+        <span class="n">element_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">num_elements</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="c1"># Extract the global node coordinates for the element E_n</span>
+            <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+            <span class="c1"># Select for the solution at the local finite element nodes</span>
+            <span class="n">local_sol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[:,</span> <span class="n">n</span><span class="p">]]</span>
+
+            <span class="c1"># Define the integrand</span>
+            <span class="k">def</span> <span class="nf">integrand</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">exact_sol</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe_solution</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">local_sol</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span>
+
+            <span class="c1"># Integrate</span>
+            <span class="n">element_error</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">b</span><span class="o">=</span><span class="n">vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Return the sqrt of the sum of the errors</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">element_error</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Poisson1D.l2_error"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson1D.l2_error">[docs]</a>    <span class="k">def</span> <span class="nf">l2_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exact_sol</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The L2 norm error of the finite element solution compared against the given analytical solution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        exact_sol : function</span>
+<span class="sd">            The analytical solution to the Poisson equation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The L2 norm error of the finite element solution over the domain evaluated element-wise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__l2_hsemi_norm_error</span><span class="p">(</span><span class="n">exact_sol</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Poisson1D.h1_seminorm_error"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson1D.h1_seminorm_error">[docs]</a>    <span class="k">def</span> <span class="nf">h1_seminorm_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">diff_exact_sol</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The H1 semi-norm error of the finite element solution compared against the given analyatical solution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        diff_exact_sol : function</span>
+<span class="sd">            The first derivative of the analytical solution to the Poisson equation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The H1 semi-norm error of the finite element solution over the domain evaluated element-wise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__l2_hsemi_norm_error</span><span class="p">(</span><span class="n">diff_exact_sol</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Poisson2D"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson2D">[docs]</a><span class="k">class</span> <span class="nc">Poisson2D</span><span class="p">(</span><span class="n">Poisson1D</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves a two-dimensional Poisson equation.</span>
+
+<span class="sd">    Uses finite element methods to solve a Poisson differential equation of the form</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        -\nabla\left(c(\mathbf{x}) \cdot \nabla u(\mathbf{x}) \right) = f(\mathbf{x}); \mathbf{x} \in \Omega</span>
+
+<span class="sd">    with a combination of Dirichlet, Neumann, or Robin boundary conditions.</span>
+
+<span class="sd">    .. warning:: All edge boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the</span>
+<span class="sd">        solution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : :class:`FEMpy.Mesh.TriangularMesh2D`</span>
+<span class="sd">        A :class:`Mesh` class defining the mesh and associated information matrices.</span>
+<span class="sd">    fe_trial_basis, fe_test_basis : :class:`FEMpy.FEBasis.IntervalBasis1D`</span>
+<span class="sd">        A :class:`FEBasis` class defining the finite element basis functions for the trial and test bases.</span>
+<span class="sd">    boundary_conditions : :class:`FEMpy.Boundaries.BoundaryConditions2D`</span>
+<span class="sd">        A :class: `BoundaryConditions` class defining the boundary conditions on the domain.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; from FEMpy import TriangularMesh2D, TriangularBasis2D, BoundaryConditions2D, Poisson2D</span>
+<span class="sd">    &gt;&gt;&gt; left, right, bottom, top = -1, 1, -1, 1</span>
+<span class="sd">    &gt;&gt;&gt; h = 1</span>
+<span class="sd">    &gt;&gt;&gt; def dirichlet_funct(coord):</span>
+<span class="sd">    &gt;&gt;&gt;     x, y = coord</span>
+<span class="sd">    &gt;&gt;&gt;     if x == -1:</span>
+<span class="sd">    &gt;&gt;&gt;         return np.exp(-1 + y)</span>
+<span class="sd">    &gt;&gt;&gt;     elif x == 1:</span>
+<span class="sd">    &gt;&gt;&gt;         return np.exp(1 + y)</span>
+<span class="sd">    &gt;&gt;&gt;     elif y == 1:</span>
+<span class="sd">    &gt;&gt;&gt;         return np.exp(x + 1)</span>
+<span class="sd">    &gt;&gt;&gt;     elif y == -1:</span>
+<span class="sd">    &gt;&gt;&gt;         return np.exp(x - 1)</span>
+<span class="sd">    &gt;&gt;&gt; coeff_funct = lambda coord: 1</span>
+<span class="sd">    &gt;&gt;&gt; source_funct = lambda coord: -2 * np.exp(coord[0] + coord[1])</span>
+<span class="sd">    &gt;&gt;&gt; mesh = TriangularMesh2D(left, right, bottom, top, h, h, &#39;linear&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; basis = TriangularBasis2D(&#39;linear&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; boundary_node_types = [&#39;dirichlet&#39;] * mesh.boundary_nodes.shape[1]</span>
+<span class="sd">    &gt;&gt;&gt; boundary_edge_types = [&#39;dirichlet&#39;] * (mesh.boundary_edges.shape[1]-1)</span>
+<span class="sd">    &gt;&gt;&gt; bcs = BoundaryConditions2D(mesh, boundary_node_types, boundary_edge_types, dirichlet_fun=dirichlet_funct)</span>
+<span class="sd">    &gt;&gt;&gt; poisson_eq = Poisson2D(mesh, basis, basis, bcs)</span>
+<span class="sd">    &gt;&gt;&gt; poisson_eq.solve(coeff_funct, source_funct)</span>
+<span class="sd">    array([0.13533528, 0.36787944, 1., 0.36787944, 1.,  2.71828183, 1., 2.71828183, 7.3890561])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">fe_trial_basis</span><span class="p">,</span> <span class="n">fe_test_basis</span><span class="p">,</span> <span class="n">boundary_conditions</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">fe_trial_basis</span><span class="p">,</span> <span class="n">fe_test_basis</span><span class="p">,</span> <span class="n">boundary_conditions</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Poisson2D.solve"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson2D.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coeff_fun</span><span class="p">,</span> <span class="n">source_fun</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method that performs the finte element solution algorithm.</span>
+
+<span class="sd">        Calls the assembly functions `FEMpy.Assemblers.assemble_matrix` and `FEMpy.Assemblers.assemble_vector` to create</span>
+<span class="sd">        the stiffness matrix and load vector respectively. Then, applies the boundary condition treatments to the matrix</span>
+<span class="sd">        and vector. Finally, solves the linear system :math:`A\mathbf{x} = \mathbf{b}.`</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coeff_fun : function</span>
+<span class="sd">            Function name of the coefficient function `c`(`x`, `y`) in the Poisson equation.</span>
+<span class="sd">        source_fun : function</span>
+<span class="sd">            The nonhomogeneous source function `f`(`x`, `y`) of the Poisson equation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create our stiffness matrix</span>
+        <span class="n">stiffness_matrix1</span> <span class="o">=</span> <span class="n">assemble_matrix</span><span class="p">(</span><span class="n">coeff_fun</span><span class="p">,</span>
+                                            <span class="n">mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">,</span>
+                                            <span class="n">trial_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_trial</span><span class="p">,</span> <span class="n">test_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="p">,</span>
+                                            <span class="n">derivative_order_trial</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">derivative_order_test</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">stiffness_matrix2</span> <span class="o">=</span> <span class="n">assemble_matrix</span><span class="p">(</span><span class="n">coeff_fun</span><span class="p">,</span>
+                                            <span class="n">mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">,</span>
+                                            <span class="n">trial_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_trial</span><span class="p">,</span> <span class="n">test_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="p">,</span>
+                                            <span class="n">derivative_order_trial</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">derivative_order_test</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">stiffness_matrix</span> <span class="o">=</span> <span class="p">(</span><span class="n">stiffness_matrix1</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span> <span class="o">+</span> <span class="n">stiffness_matrix2</span><span class="o">.</span><span class="n">tocsr</span><span class="p">())</span><span class="o">.</span><span class="n">tolil</span><span class="p">()</span>
+
+        <span class="c1"># Create our load vector</span>
+        <span class="n">load_vector</span> <span class="o">=</span> <span class="n">assemble_vector</span><span class="p">(</span><span class="n">source_fun</span><span class="p">,</span>
+                                      <span class="n">mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="p">,</span>
+                                      <span class="n">test_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="p">,</span>
+                                      <span class="n">derivative_order_test</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="c1"># Modify the stiffness matrix and the load vector to accommodate the boundary conditions specified.</span>
+        <span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span><span class="o">.</span><span class="n">treat_robin</span><span class="p">(</span><span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span><span class="p">)</span>
+        <span class="n">load_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span><span class="o">.</span><span class="n">treat_neumann</span><span class="p">(</span><span class="n">load_vector</span><span class="p">)</span>
+        <span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_conditions</span><span class="o">.</span><span class="n">treat_dirichlet</span><span class="p">(</span><span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span><span class="p">)</span>
+
+        <span class="c1"># Convert the stiffness matrix to a compressed sparse row matrix as it will be more efficient for matrix-vector</span>
+        <span class="c1"># products</span>
+        <span class="n">stiffness_matrix</span> <span class="o">=</span> <span class="n">stiffness_matrix</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+
+        <span class="c1"># Solve the system for our result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span> <span class="o">=</span> <span class="n">linalg</span><span class="o">.</span><span class="n">spsolve</span><span class="p">(</span><span class="n">stiffness_matrix</span><span class="p">,</span> <span class="n">load_vector</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span></div>
+
+<div class="viewcode-block" id="Poisson2D.fe_solution"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson2D.fe_solution">[docs]</a>    <span class="k">def</span> <span class="nf">fe_solution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">local_sol</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Defines the functional solution piecewise on the finite on the finite elements.</span>
+
+<span class="sd">        Uses the solution vector and the basis function to define a piecewise continuous solution over the element.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coords : float or array_like</span>
+<span class="sd">            A value or array of points to evaluate the function on.</span>
+<span class="sd">        local_sol : array_like</span>
+<span class="sd">            Finite element solution node vector local to the element `En`.</span>
+<span class="sd">        vertices : array_like</span>
+<span class="sd">            Global node coordinates for the mesh element `En`.</span>
+<span class="sd">        derivative_order : tuple of int</span>
+<span class="sd">            The derivative orders in the x- and y-directions to take the basis function to.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Solution at all points in `coords` in element.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Set the basis type from the test basis</span>
+        <span class="n">basis_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="o">.</span><span class="n">basis_type</span>
+
+        <span class="k">if</span> <span class="n">basis_type</span> <span class="o">==</span> <span class="mi">201</span><span class="p">:</span>  <span class="c1"># linear basis</span>
+            <span class="n">num_local_basis</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="k">elif</span> <span class="n">basis_type</span> <span class="o">==</span> <span class="mi">202</span><span class="p">:</span>  <span class="c1"># quadratic basis</span>
+            <span class="n">num_local_basis</span> <span class="o">=</span> <span class="mi">6</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown basis type&#39;</span><span class="p">)</span>
+
+        <span class="n">fun_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">local_sol</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fe_test</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+                                                                        <span class="n">derivative_order</span><span class="o">=</span><span class="n">derivative_order</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_local_basis</span><span class="p">)])</span>
+
+        <span class="k">return</span> <span class="n">fun_value</span></div>
+
+<div class="viewcode-block" id="Poisson2D.l_inf_error"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson2D.l_inf_error">[docs]</a>    <span class="nd">@copy_docstring_from</span><span class="p">(</span><span class="n">Poisson1D</span><span class="o">.</span><span class="n">l_inf_error</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">l_inf_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exact_sol</span><span class="p">):</span>
+        <span class="c1"># Get the number of elements from the mesh</span>
+        <span class="n">num_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">num_elements_x</span>
+
+        <span class="c1"># Initialize the element maximum error vector</span>
+        <span class="n">element_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">num_elements</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="c1"># Extract the global node coordinates for the element E_n</span>
+            <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+            <span class="c1"># Select for the solution at the local finite element nodes</span>
+            <span class="n">local_sol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[:,</span> <span class="n">n</span><span class="p">]]</span>
+
+            <span class="c1"># Generate grid of points local to the element</span>
+            <span class="c1"># grid_points = sample_points_in_triangle(50)</span>
+            <span class="n">grid_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[(</span><span class="mi">1</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">4</span><span class="p">],</span>
+                                    <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">5</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">4</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+
+            <span class="c1"># Transform the sampled grid point into our triangle</span>
+            <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">x3</span><span class="p">,</span> <span class="n">y3</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="c1"># The affine transformation from the standard triangle to our element triangle is</span>
+            <span class="n">new_x</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">x1</span> <span class="o">+</span> <span class="n">x2</span><span class="p">)</span> <span class="o">*</span> <span class="n">grid_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x1</span> <span class="o">+</span> <span class="n">x3</span><span class="p">)</span> <span class="o">*</span> <span class="n">grid_points</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">x1</span>
+            <span class="n">new_y</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">y1</span> <span class="o">+</span> <span class="n">y2</span><span class="p">)</span> <span class="o">*</span> <span class="n">grid_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">y1</span> <span class="o">+</span> <span class="n">y3</span><span class="p">)</span> <span class="o">*</span> <span class="n">grid_points</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y1</span>
+
+            <span class="n">element_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span><span class="p">])</span>
+
+            <span class="c1"># Compute the error on each evaluation node point in the element</span>
+            <span class="n">element_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">exact_sol</span><span class="p">(</span><span class="n">element_points</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe_solution</span><span class="p">(</span><span class="n">element_points</span><span class="p">,</span> <span class="n">local_sol</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span>
+                                                                                <span class="n">derivative_order</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+
+            <span class="c1"># Find the maximum error in the element</span>
+            <span class="n">element_max</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">element_error</span><span class="p">)</span>
+
+        <span class="c1"># Return the maximum error over all elements</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">element_max</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__l2_hsemi_norm_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exact_sol</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes either the L2 norm error or the H1 semi-norm error.</span>
+
+<span class="sd">        Computes either the L2 norm error or the H1 semi-norm error dependent on the derivative order specified . If</span>
+<span class="sd">        ```derivative_order` == 1`` then the L2 norm error is computed, if ```derivative_order` == 1`` then the H1</span>
+<span class="sd">        semi-norm is computed.</span>
+
+<span class="sd">        .. note:: This is designed to be called via the `l2_error` and `h1_seminorm_error` methods which will provide</span>
+<span class="sd">        the appropriate `derivative_order`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        exact_sol : function</span>
+<span class="sd">            The analytical solution. If the H1 semi-norm error is desired, this must be the first derivative of the</span>
+<span class="sd">            analytical solution.</span>
+<span class="sd">        derivative_order : tuple of int</span>
+<span class="sd">            The derivative orders in the x- and y-directions to take the basis function to.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The L2 norm error or the H1 semi-norm error of the finite element solution over the domain evaluated</span>
+<span class="sd">            element-wise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the number of elements from the mesh</span>
+        <span class="n">num_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">num_elements_x</span>
+
+        <span class="c1"># Initialize the elment error vector</span>
+        <span class="n">element_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">num_elements</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="c1"># Extract the global node coordinates for the element E_n</span>
+            <span class="n">vertices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+            <span class="c1"># Select for the solution at the local finite element nodes</span>
+            <span class="n">local_sol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodal_solution</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[:,</span> <span class="n">n</span><span class="p">]]</span>
+
+            <span class="c1"># Define the integrand</span>
+            <span class="k">def</span> <span class="nf">integrand</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">exact_sol</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe_solution</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">local_sol</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">derivative_order</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span>
+
+            <span class="c1"># Integrate</span>
+            <span class="n">element_error</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">dbquad_triangle</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">vertices</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Return the sqrt of the sum of the errors</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">element_error</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Poisson2D.l2_error"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson2D.l2_error">[docs]</a>    <span class="nd">@copy_docstring_from</span><span class="p">(</span><span class="n">Poisson1D</span><span class="o">.</span><span class="n">l2_error</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">l2_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exact_sol</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__l2_hsemi_norm_error</span><span class="p">(</span><span class="n">exact_sol</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Poisson2D.h1_seminorm_error"><a class="viewcode-back" href="../../user/solvers.html#FEMpy.Solvers.Poisson2D.h1_seminorm_error">[docs]</a>    <span class="k">def</span> <span class="nf">h1_seminorm_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">diff_exact_sol</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The H1 semi-norm error of the finite element solution compared against the given analyatical solution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        diff_exact_sol : tuple of function</span>
+<span class="sd">            A tuple of first derivatives in the x- and the y- directions the analytical solution to the Poisson equation</span>
+<span class="sd">            respectively.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The full H1 semi-norm error of the finite element solution over the domain evaluated element-wise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">dx_exact_sol</span><span class="p">,</span> <span class="n">dy_exact_sol</span> <span class="o">=</span> <span class="n">diff_exact_sol</span>
+
+        <span class="n">h1_x_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__l2_hsemi_norm_error</span><span class="p">(</span><span class="n">dx_exact_sol</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">h1_y_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__l2_hsemi_norm_error</span><span class="p">(</span><span class="n">dy_exact_sol</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">h1_x_error</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">h1_y_error</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Benjamin Floyd.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

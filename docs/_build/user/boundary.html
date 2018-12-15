@@ -1,0 +1,473 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Boundary Conditions &mdash; FEMpy 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="FEMpy 1.0 documentation" href="../index.html"/>
+        <link rel="next" title="Finite Element Solvers" href="solvers.html"/>
+        <link rel="prev" title="Finite Element Bases" href="basis.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> FEMpy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mesh.html">Mesh Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basis.html">Finite Element Bases</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Boundary Conditions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#d-boundary-condiions">1D Boundary Condiions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#d-boundary-conditions">2D Boundary Conditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="solvers.html">Finite Element Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="assemblers.html">Assemblers</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/triangular2d.html">2D Poisson Equation with Triangular Elements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/errors.html">Error calculations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">FEMpy</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Boundary Conditions</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/user/boundary.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="boundary-conditions">
+<span id="boundary"></span><h1>Boundary Conditions<a class="headerlink" href="#boundary-conditions" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="d-boundary-condiions">
+<h2>1D Boundary Condiions<a class="headerlink" href="#d-boundary-condiions" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="FEMpy.Boundaries.BoundaryConditions">
+<em class="property">class </em><code class="descclassname">FEMpy.Boundaries.</code><code class="descname">BoundaryConditions</code><span class="sig-paren">(</span><em>mesh</em>, <em>boundary_types</em>, <em>boundary_coords=None</em>, <em>dirichlet_fun=None</em>, <em>neumann_fun=None</em>, <em>robin_fun_q=None</em>, <em>robin_fun_p=None</em>, <em>coeff_fun=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines all boundary conditions to be applied to a Poisson equation.</p>
+<p>Takes in the coordinates for the boundary nodes and the boundary condition types and provides the treatments for
+each of the boundry condition types.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mesh</strong> (<em>{:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}</em>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">Mesh</span></code> class defining the mesh and associated information matrices.</li>
+<li><strong>boundary_types</strong> (array_like of str {‘dirichlet`, ‘neumann’, ‘robin’}) – Boundary condition type for each coordinate in <cite>boundary_coords</cite>.</li>
+<li><strong>boundary_coords</strong> (<em>array_like, optional</em>) – List of coordinate values of the boundary nodes. If not specified, will use the boundary node coordinates stored
+in <cite>mesh</cite>.</li>
+<li><strong>dirichlet_fun</strong> (<em>function, optional</em>) – The Dirichlet boundary condition function <cite>g`(`x</cite>). Must be defined at the boundary values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>neumann_fun</strong> (<em>function, optional</em>) – The Neumann boundary condition function <cite>r`(`x</cite>). Must be defined at the bounadry values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>robin_fun_q</strong> (<em>function, optional</em>) – The Robin boundary condition function <cite>q`(`x</cite>). Must be defined at the boundary values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>robin_fun_p</strong> (<em>function, optional</em>) – The Robin boundary condition function <cite>p`(`x</cite>). Must be defined at the boundary values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>coeff_fun</strong> (<em>function, optional</em>) – Function name of the coefficient function <cite>c`(`x</cite>) in the Poisson equation. Required if Neumann or Robin
+boundary conditions are included.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Both end point boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the
+solution.</p>
+</div>
+<p class="rubric">Notes</p>
+<ul>
+<li><p class="first">The Dirichlet boundary conditions are be defined as</p>
+<div class="math notranslate nohighlight">
+\[u(x) = g(x); x = a \text{ or } b.\]</div>
+</li>
+<li><p class="first">The Neumann boundary conditions are defined as</p>
+<div class="math notranslate nohighlight">
+\[\frac{{\rm d}}{{\rm d} x} u(x) = r(x); x = a \text{ or } b.\]</div>
+</li>
+<li><p class="first">The Robin boundary conditions are defined as</p>
+<div class="math notranslate nohighlight">
+\[\frac{{\rm d}}{{\rm d}x} u(x) + q(x) u(x) = p(x); x = a \text{ or } b.\]</div>
+</li>
+</ul>
+<dl class="method">
+<dt id="FEMpy.Boundaries.BoundaryConditions.treat_dirichlet">
+<code class="descname">treat_dirichlet</code><span class="sig-paren">(</span><em>matrix</em>, <em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions.treat_dirichlet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions.treat_dirichlet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrites the appropriate entries in the stiffness matrix and load vector.</p>
+<p>Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>ndarray</em>) – Finite element stiffness matrix.</li>
+<li><strong>vector</strong> (<em>ndarray</em>) – Finite element load vector.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>matrix</strong> (<em>ndarray</em>) – Corrected finite element stiffness matrix with Dirichlet boundary conditions incorporated.</li>
+<li><strong>vector</strong> (<em>ndarray</em>) – Corrected finite element load vector with Dirichlet boundary conditions incorporated.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Boundaries.BoundaryConditions.treat_neumann">
+<code class="descname">treat_neumann</code><span class="sig-paren">(</span><em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions.treat_neumann"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions.treat_neumann" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrites the appropriate entries in the load vector.</p>
+<p>Corrects the load vector to properly incorporate the boundary conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vector</strong> (<em>ndarray</em>) – Finite element load vector.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>vector</strong> – Corrected finite element load vector with Neumann boundary conditions incorporated.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Boundaries.BoundaryConditions.treat_robin">
+<code class="descname">treat_robin</code><span class="sig-paren">(</span><em>matrix</em>, <em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions.treat_robin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions.treat_robin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrites the appropriate entries in the stiffness matrix and load vector.</p>
+<p>Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>ndarray</em>) – Finite element stiffness matrix.</li>
+<li><strong>vector</strong> (<em>ndarray</em>) – Finite element load vector.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>matrix</strong> (<em>ndarray</em>) – Corrected finite element stiffness matrix with Robin boundary conditions incorporated.</li>
+<li><strong>vector</strong> (<em>ndarray</em>) – Corrected finite element load vector with Robin boundary conditions incorporated.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="d-boundary-conditions">
+<h2>2D Boundary Conditions<a class="headerlink" href="#d-boundary-conditions" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="FEMpy.Boundaries.BoundaryConditions2D">
+<em class="property">class </em><code class="descclassname">FEMpy.Boundaries.</code><code class="descname">BoundaryConditions2D</code><span class="sig-paren">(</span><em>mesh</em>, <em>boundary_node_types</em>, <em>boundary_edge_types</em>, <em>boundary_node_coords=None</em>, <em>boundary_edge_coords=None</em>, <em>trial_basis=None</em>, <em>test_basis=None</em>, <em>dirichlet_fun=None</em>, <em>neumann_fun=None</em>, <em>robin_fun_q=None</em>, <em>robin_fun_p=None</em>, <em>coeff_fun=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines all boundary conditions to be applied to a Poisson equation.</p>
+<p>Takes in the coordinates for the boundary nodes and boundary edges and the boundary condition types for each and
+provides the treatments for each of the boundry condition types.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mesh</strong> (<em>{:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}</em>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">Mesh</span></code> class defining the mesh and associated information matrices.</li>
+<li><strong>boundary_node_types</strong> (array_like of str {‘dirichlet`, ‘neumann’, ‘robin’}) – Boundary condition type for each coordinate in <cite>boundary_node_coords</cite>.</li>
+<li><strong>boundary_edge_types</strong> (array_like of str {‘dirichlet`, ‘neumann’, ‘robin’}) – Boundary condition type for each edge segment in <cite>boundary_edge_coords</cite>.</li>
+<li><strong>boundary_node_coords</strong> (<em>array_like, optional</em>) – List of coordinate values of the boundary nodes. If not specified, will use the boundary node coordinates stored
+in <cite>mesh</cite>.</li>
+<li><strong>boundary_edge_coords</strong> (<em>array_like, optional</em>) – List of grid coordinates for edge nodes. If not specified, will use the boundary edge coordinates stored in
+<cite>mesh</cite>.</li>
+<li><strong>trial_basis, test_basis</strong> (<em>{:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}, optional</em>) – A :class: <cite>FEBasis</cite> class defining the finite element basis functions for the trial and test bases. If Neumann
+boundary conditions included <cite>test_basis</cite> is required. If Robin boundary conditions included, then both bases
+are required.</li>
+<li><strong>dirichlet_fun</strong> (<em>function, optional</em>) – The Dirichlet boundary condition function <cite>g`(`x</cite>, <cite>y</cite>). Must be defined at the boundary values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>neumann_fun</strong> (<em>function, optional</em>) – The Neumann boundary condition function <cite>r`(`x</cite>, <cite>y</cite>). Must be defined at the bounadry values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>robin_fun_q</strong> (<em>function, optional</em>) – The Robin boundary condition function <cite>q`(`x</cite>, <cite>y</cite>). Must be defined at the boundary values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>robin_fun_p</strong> (<em>function, optional</em>) – The Robin boundary condition function <cite>p`(`x</cite>, <cite>y</cite>). Must be defined at the boundary values specified in
+<cite>boundary_coords</cite>.</li>
+<li><strong>coeff_fun</strong> (<em>function, optional</em>) – Function name of the coefficient function <cite>c`(`x</cite>, <cite>y</cite>) in the Poisson equation. Required if Neumann or Robin
+boundary conditions are included.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">All edge boundary conditions cannot be Neumann as this may result in a loss of uniqueness of the
+solution.</p>
+</div>
+<p class="rubric">Notes</p>
+<ul>
+<li><p class="first">The Dirichlet boundary conditions are be defined as</p>
+<div class="math notranslate nohighlight">
+\[u(x, y) = g(x, y); (x, y) \in \delta\Omega \setminus (\Gamma_1 \cup \Gamma_2).\]</div>
+</li>
+<li><p class="first">The Neumann boundary conditions are defined as</p>
+<div class="math notranslate nohighlight">
+\[\nabla u(x, y) \cdot \hat{\mathbf{n}} = r(x, y); (x, y) \in \Gamma_1 \subseteq \delta\Omega,\]</div>
+</li>
+<li><p class="first">The Robin boundary conditions are defined as</p>
+<div class="math notranslate nohighlight">
+\[\nabla u(x, y) \cdot \hat{\mathbf{n}} + q(x, y) u(x, y) = p(x, y); (x, y) \in \Gamma_2 \subseteq \delta\Omega.\]</div>
+</li>
+</ul>
+<dl class="method">
+<dt id="FEMpy.Boundaries.BoundaryConditions2D.treat_neumann">
+<code class="descname">treat_neumann</code><span class="sig-paren">(</span><em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions2D.treat_neumann"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions2D.treat_neumann" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrites the appropriate entries in the load vector.</p>
+<p>Corrects the load vector to properly incorporate the boundary conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vector</strong> (<em>ndarray</em>) – Finite element load vector.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>vector</strong> – Corrected finite element load vector with Neumann boundary conditions incorporated.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="FEMpy.Boundaries.BoundaryConditions2D.treat_robin">
+<code class="descname">treat_robin</code><span class="sig-paren">(</span><em>matrix</em>, <em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/FEMpy/Boundaries.html#BoundaryConditions2D.treat_robin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#FEMpy.Boundaries.BoundaryConditions2D.treat_robin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwrites the appropriate entries in the stiffness matrix and load vector.</p>
+<p>Corrects the stiffness matrix and load vector to properly incorporate the boundary conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>ndarray</em>) – Finite element stiffness matrix.</li>
+<li><strong>vector</strong> (<em>ndarray</em>) – Finite element load vector.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>matrix</strong> (<em>ndarray</em>) – Corrected finite element stiffness matrix with Robin boundary conditions incorporated.</li>
+<li><strong>vector</strong> (<em>ndarray</em>) – Corrected finite element load vector with Robin boundary conditions incorporated.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="solvers.html" class="btn btn-neutral float-right" title="Finite Element Solvers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="basis.html" class="btn btn-neutral" title="Finite Element Bases" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Benjamin Floyd.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

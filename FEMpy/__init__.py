@@ -3,6 +3,8 @@ FEMpy : A Python finite element solver.
 Author: Benjamin Floyd
 """
 
+__version__ = '1.0'
+
 # Import the relevant modules so they are conviently accessible on import.
 from .Boundaries import *
 from .FEBasis import *

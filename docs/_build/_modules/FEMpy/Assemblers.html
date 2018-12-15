@@ -1,0 +1,330 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>FEMpy.Assemblers &mdash; FEMpy 1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="FEMpy 1.0 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> FEMpy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../user/install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/mesh.html">Mesh Generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/basis.html">Finite Element Bases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/boundary.html">Boundary Conditions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/solvers.html">Finite Element Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user/assemblers.html">Assemblers</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/triangular2d.html">2D Poisson Equation with Triangular Elements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/errors.html">Error calculations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">FEMpy</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>FEMpy.Assemblers</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for FEMpy.Assemblers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Assemblers.py</span>
+<span class="sd">Author: Benjamin Floyd</span>
+
+<span class="sd">Contains the matrix and vector assembler methods.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">product</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="k">import</span> <span class="n">quad</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">lil_matrix</span>
+
+<span class="kn">from</span> <span class="nn">.helpers</span> <span class="k">import</span> <span class="n">dbquad_triangle</span><span class="p">,</span> <span class="n">basis_type_parser</span>
+
+
+<div class="viewcode-block" id="assemble_matrix"><a class="viewcode-back" href="../../user/assemblers.html#FEMpy.Assemblers.assemble_matrix">[docs]</a><span class="k">def</span> <span class="nf">assemble_matrix</span><span class="p">(</span><span class="n">coeff_funct</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">trial_basis</span><span class="p">,</span> <span class="n">test_basis</span><span class="p">,</span> <span class="n">derivative_order_trial</span><span class="p">,</span> <span class="n">derivative_order_test</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct the finite element stiffness matrix. Meant to be used in a :class:`FEMpy.Solvers` `solve` method.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coeff_funct : function</span>
+<span class="sd">        Function name of the coefficient function `c(x(,y,...))` in a Poisson equation.</span>
+<span class="sd">    mesh : {:class:`FEMpy.Mesh.Interval1D`, :class:`FEMpy.Mesh.TriangularMesh2D`}</span>
+<span class="sd">        A :class:`Mesh` class defining the mesh and associated information matrices.</span>
+<span class="sd">    trial_basis, test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}</span>
+<span class="sd">        A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases.</span>
+<span class="sd">    derivative_order_trial, derivative_order_test : int or tuple of int</span>
+<span class="sd">        The derivative order to be applied to the finite element basis functions. If basis function is one-dimensional,</span>
+<span class="sd">        this should be specified as an int. Otherwise, the derivative order should be specified as a tuple with the</span>
+<span class="sd">        orders corresponding to the coordinate axes in the basis functions. e.g., ``(`x_order`, `y_order`,...)``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sparse matrix</span>
+<span class="sd">        The finite element stiffness matrix as a row-based linked list sparse matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Determine the size of the matrix</span>
+    <span class="n">num_equations</span><span class="p">,</span> <span class="n">num_local_trial</span> <span class="o">=</span> <span class="n">basis_type_parser</span><span class="p">(</span><span class="n">trial_basis</span><span class="o">.</span><span class="n">basis_type</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span>
+    <span class="n">num_unknowns</span><span class="p">,</span> <span class="n">num_local_test</span> <span class="o">=</span> <span class="n">basis_type_parser</span><span class="p">(</span><span class="n">test_basis</span><span class="o">.</span><span class="n">basis_type</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span>
+
+    <span class="c1"># Initialize the matrix as a sparse, row-based linked list matrix.</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">lil_matrix</span><span class="p">((</span><span class="n">num_equations</span><span class="p">,</span> <span class="n">num_unknowns</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="c1"># Generate the vertices for each element</span>
+        <span class="n">vertices</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">for</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_local_trial</span><span class="p">),</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_local_test</span><span class="p">)):</span>
+            <span class="c1"># Set up our integrand</span>
+            <span class="k">def</span> <span class="nf">integrand</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">coeff_funct</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                        <span class="o">*</span> <span class="n">trial_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span>
+                                                     <span class="n">derivative_order</span><span class="o">=</span><span class="n">derivative_order_trial</span><span class="p">)</span>
+                        <span class="o">*</span> <span class="n">test_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
+                                                    <span class="n">derivative_order</span><span class="o">=</span><span class="n">derivative_order_test</span><span class="p">))</span>
+
+            <span class="c1"># Integrate using adaptive Gaussian quadrature</span>
+            <span class="k">if</span> <span class="n">test_basis</span><span class="o">.</span><span class="n">basis_type</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">]:</span>
+                <span class="n">int_value</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">b</span><span class="o">=</span><span class="n">vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">elif</span> <span class="n">test_basis</span><span class="o">.</span><span class="n">basis_type</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">201</span><span class="p">,</span> <span class="mi">202</span><span class="p">]:</span>
+                <span class="n">int_value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dbquad_triangle</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">vertices</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown basis type&#39;</span><span class="p">)</span>
+
+            <span class="n">A</span><span class="p">[</span><span class="n">mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">beta</span><span class="p">,</span> <span class="n">n</span><span class="p">],</span> <span class="n">mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">n</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">int_value</span>
+
+    <span class="k">return</span> <span class="n">A</span></div>
+
+
+<div class="viewcode-block" id="assemble_vector"><a class="viewcode-back" href="../../user/assemblers.html#FEMpy.Assemblers.assemble_vector">[docs]</a><span class="k">def</span> <span class="nf">assemble_vector</span><span class="p">(</span><span class="n">source_funct</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">test_basis</span><span class="p">,</span> <span class="n">derivative_order_test</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constructs the finite element load vector. Meant to be used in a :class:`FEMpy.Solvers` `solve` method.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source_funct : function</span>
+<span class="sd">        The nonhomogeneous source function `f(x(,y,...))` of the Poisson equation.</span>
+<span class="sd">    mesh : {:class:`FEMpy.Mesh.Interval1D`, :class:`FEMpy.Mesh.TriangularMesh2D`}</span>
+<span class="sd">        A :class:`Mesh` class defining the mesh and associated information matrices.</span>
+<span class="sd">    test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}</span>
+<span class="sd">        A :class: `FEBasis` class defining the finite element basis functions for the test basis.</span>
+<span class="sd">    derivative_order_test : int or tuple of int</span>
+<span class="sd">        The derivative order to be applied to the finite element basis function. If basis function is one-dimensional,</span>
+<span class="sd">        this should be specified as an int. Otherwise, the derivative order should be specified as a tuple with the</span>
+<span class="sd">        orders corresponding to the coordinate axes in the basis functions. e.g., ``(`x_order`, `y_order`,...)``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        The finite element load vector.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Determine the size of the vector</span>
+    <span class="n">num_unknowns</span><span class="p">,</span> <span class="n">num_local_test</span> <span class="o">=</span> <span class="n">basis_type_parser</span><span class="p">(</span><span class="n">test_basis</span><span class="o">.</span><span class="n">basis_type</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span>
+
+    <span class="c1"># Initialize the vector</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">num_unknowns</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="c1"># Extract the global node coordinates to evaluate our integral on</span>
+        <span class="n">vertices</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_vertices</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">for</span> <span class="n">beta</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_local_test</span><span class="p">):</span>
+            <span class="c1"># Set up our integrand</span>
+            <span class="k">def</span> <span class="nf">integrand</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">source_funct</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                        <span class="o">*</span> <span class="n">test_basis</span><span class="o">.</span><span class="n">fe_local_basis</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">vertices</span><span class="o">=</span><span class="n">vertices</span><span class="p">,</span> <span class="n">basis_idx</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
+                                                    <span class="n">derivative_order</span><span class="o">=</span><span class="n">derivative_order_test</span><span class="p">))</span>
+
+            <span class="c1"># Integrate using adaptive Gaussian quadrature</span>
+            <span class="k">if</span> <span class="n">test_basis</span><span class="o">.</span><span class="n">basis_type</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">]:</span>
+                <span class="n">int_value</span> <span class="o">=</span> <span class="n">quad</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">b</span><span class="o">=</span><span class="n">vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">test_basis</span><span class="o">.</span><span class="n">basis_type</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">201</span><span class="p">,</span> <span class="mi">202</span><span class="p">]:</span>
+                <span class="n">int_value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dbquad_triangle</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">vertices</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown basis type&#39;</span><span class="p">)</span>
+
+            <span class="n">b</span><span class="p">[</span><span class="n">mesh</span><span class="o">.</span><span class="n">Tb</span><span class="p">[</span><span class="n">beta</span><span class="p">,</span> <span class="n">n</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">int_value</span>
+
+    <span class="k">return</span> <span class="n">b</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Benjamin Floyd.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

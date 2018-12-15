@@ -16,13 +16,13 @@ from .helpers import dbquad_triangle, basis_type_parser
 
 def assemble_matrix(coeff_funct, mesh, trial_basis, test_basis, derivative_order_trial, derivative_order_test):
     """
-    Construct the finite element stiffness matrix.
+    Construct the finite element stiffness matrix. Meant to be used in a :class:`FEMpy.Solvers` `solve` method.
 
     Parameters
     ----------
     coeff_funct : function
-        Function name of the coefficient function `c`(`x`(,`y`,...)) in a Poisson equation.
-    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
+        Function name of the coefficient function `c(x(,y,...))` in a Poisson equation.
+    mesh : {:class:`FEMpy.Mesh.Interval1D`, :class:`FEMpy.Mesh.TriangularMesh2D`}
         A :class:`Mesh` class defining the mesh and associated information matrices.
     trial_basis, test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}
         A :class: `FEBasis` class defining the finite element basis functions for the trial and test bases.
@@ -73,13 +73,13 @@ def assemble_matrix(coeff_funct, mesh, trial_basis, test_basis, derivative_order
 
 def assemble_vector(source_funct, mesh, test_basis, derivative_order_test):
     """
-    Constructs the finite element load vector.
+    Constructs the finite element load vector. Meant to be used in a :class:`FEMpy.Solvers` `solve` method.
 
     Parameters
     ----------
     source_funct : function
-        The nonhomogeneous source function `f`(`x`(,`y`,...)) of the Poisson equation.
-    mesh : {:class: FEMpy.Mesh.Interval1D, :class: FEMpy.Mesh.TriangularMesh2D}
+        The nonhomogeneous source function `f(x(,y,...))` of the Poisson equation.
+    mesh : {:class:`FEMpy.Mesh.Interval1D`, :class:`FEMpy.Mesh.TriangularMesh2D`}
         A :class:`Mesh` class defining the mesh and associated information matrices.
     test_basis : {:class: FEMpy.FEBasis.IntervalBasis1D, :class: FEMpy.FEBasis.TriangularBasis2D}
         A :class: `FEBasis` class defining the finite element basis functions for the test basis.
@@ -113,8 +113,7 @@ def assemble_vector(source_funct, mesh, test_basis, derivative_order_test):
 
             # Integrate using adaptive Gaussian quadrature
             if test_basis.basis_type in [101, 102]:
-                int_value = quad(integrand, a=vertices[0], b=vertices[1],
-                                 args=(vertices, beta, derivative_order_test))[0]
+                int_value = quad(integrand, a=vertices[0], b=vertices[1])[0]
             elif test_basis.basis_type in [201, 202]:
                 int_value, _ = dbquad_triangle(integrand, vertices)
             else:

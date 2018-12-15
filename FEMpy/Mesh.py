@@ -48,22 +48,26 @@ class Interval1D(object):
     Examples
     --------
     Automatically generate the boundary nodes.
+
     >>> from FEMpy import Interval1D
     >>> mesh = Interval1D(0, 1, 1/2, 'linear')
     >>> mesh.boundary_nodes
-    >>> array([0., 1.])
+    array([0., 1.])
 
     Get the vertices of the nth element.
+
     >>> from FEMpy import Interval1D
     >>> mesh = Interval1D(0, 1, 1/4, 'quadratic')
     >>> mesh.get_vertices(3)
-    >>> array([0.75, 1.  ])
+    array([0.75, 1.  ])
 
     Show the number of elements in the interval.
+
     >>> from FEMpy import Interval1D
     >>> mesh = Interval1D(-1, 3, 1/8, 'quadratic')
     >>> mesh.num_elements_x
-    >>> 32
+    32
+
     """
 
     def __init__(self, left, right, h, basis_type):
@@ -133,9 +137,9 @@ class Interval1D(object):
 
             self.Pb = np.array([self._left + (k - 1) * self._h1 / 2 for k in np.arange(1, num_basis_fns + 1)])
             self.Tb = np.array([
-                [2 * n - 1 for n in np.arange(1, self._num_elements_x + 1)],
-                [2 * n + 1 for n in np.arange(1, self._num_elements_x + 1)],
-                [2 * n for n in np.arange(1, self._num_elements_x + 1)]
+                [2 * n - 2 for n in np.arange(1, self._num_elements_x + 1)],
+                [2 * n for n in np.arange(1, self._num_elements_x + 1)],
+                [2 * n - 1 for n in np.arange(1, self._num_elements_x + 1)]
             ], dtype='int64')
         else:
             raise ValueError('Parameter: basis_type not recognized.')
@@ -189,22 +193,24 @@ class TriangularMesh2D(Interval1D):
     Examples
     --------
     Automatically generate the boundary nodes and edges.
+
     >>> from FEMpy import TriangularMesh2D
     >>> mesh = TriangularMesh2D(0, 1, 0, 1, 1/2, 1/2, 'quadratic')
     >>> mesh.boundary_nodes
-    >>> array([[0.  , 0.25, 0.5 , 0.75, 1., 1.  , 1. , 1.  , 1., 0.75, 0.5, 0.25, 0.  , 0.  , 0.  , 0.  ],
-    >>>        [0.  , 0.  , 0.  , 0.  , 0., 0.25, 0.5, 0.75, 1., 1.  , 1. , 1.  , 1.  , 0.75, 0.5 , 0.25]])
+    array([[0.  , 0.25, 0.5 , 0.75, 1., 1.  , 1. , 1.  , 1., 0.75, 0.5, 0.25, 0.  , 0.  , 0.  , 0.  ],
+           [0.  , 0.  , 0.  , 0.  , 0., 0.25, 0.5, 0.75, 1., 1.  , 1. , 1.  , 1.  , 0.75, 0.5 , 0.25]])
     >>> mesh.boundary_edges
-    >>> array([[0. , 0.5, 1. , 1. , 1. , 0.5, 0. , 0. ],
-    >>>        [0. , 0. , 0. , 0.5, 1. , 1. , 1. , 0.5]])
+    array([[0. , 0.5, 1. , 1. , 1. , 0.5, 0. , 0. ],
+           [0. , 0. , 0. , 0.5, 1. , 1. , 1. , 0.5]])
 
     Get the number of elements in the x-axis and y-axis.
+
     >>> from FEMpy import TriangularMesh2D
     >>> mesh = TriangularMesh2D(0, 2, 0, 1, 1/2, 1/2, 'linear')
     >>> mesh.num_elements_x
-    >>> 4
+    4
     >>> mesh.num_elements_y
-    >>> 2
+    2
     """
 
     def __init__(self, left, right, bottom, top, h1, h2, basis_type):
